@@ -1,4 +1,4 @@
-# BAMT_ADMIN
+# ProActive_Admin
 
 Admin dashboard for a multi-currency e-commerce store. Client-only React SPA — Firebase
 (Auth + Firestore) is the entire backend, Cloudinary handles product images.
