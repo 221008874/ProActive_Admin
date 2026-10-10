@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { collection, getDocs, deleteDoc, doc, addDoc, updateDoc, query, orderBy, serverTimestamp, where } from 'firebase/firestore'
+import { collection, getDocs, deleteDoc, doc, addDoc, updateDoc, query, orderBy, serverTimestamp } from 'firebase/firestore'
 import { signOut } from 'firebase/auth'
 import { db, auth } from '../services/firebase'
 import { useNavigate } from 'react-router-dom'
@@ -21,11 +21,9 @@ export function useDashboardEGP() {
   const [activeTab, setActiveTab] = useState('products')
   const [confirmPaymentModal, setConfirmPaymentModal] = useState(null)
   const [dataLoaded, setDataLoaded] = useState(false)
-  const [syncStatus, setSyncStatus] = useState(null)
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
 
   const currency = 'EGP'
-  const otherCurrency = 'PI'
   
   const collectionNames = {
     products: 'products_egp',
@@ -126,44 +124,6 @@ export function useDashboardEGP() {
       navigate('/login')
     } catch (err) {
       console.error('Error logging out:', err)
-    }
-  }
-
-  const handleSyncProduct = async (product) => {
-    if (!product) return
-    try {
-      setSyncStatus('syncing')
-      const otherCollection = 'products_pi'
-      const syncedProduct = {
-        ...product,
-        currency: otherCurrency,
-        syncedFrom: currency,
-        syncedAt: serverTimestamp(),
-        originalId: product.id
-      }
-      delete syncedProduct.id
-
-      const otherProductsQuery = query(collection(db, otherCollection), where('name', '==', product.name))
-      const existingSnapshot = await getDocs(otherProductsQuery)
-
-      if (!existingSnapshot.empty) {
-        const existingDoc = existingSnapshot.docs[0]
-        await updateDoc(doc(db, otherCollection, existingDoc.id), {
-          ...syncedProduct,
-          updatedAt: serverTimestamp()
-        })
-      } else {
-        await addDoc(collection(db, otherCollection), {
-          ...syncedProduct,
-          createdAt: serverTimestamp()
-        })
-      }
-      setSyncStatus('synced')
-      setTimeout(() => setSyncStatus(null), 3000)
-    } catch (err) {
-      console.error('Error syncing product:', err)
-      setSyncStatus('error')
-      setTimeout(() => setSyncStatus(null), 3000)
     }
   }
 
@@ -326,9 +286,7 @@ export function useDashboardEGP() {
     activeTab,
     confirmPaymentModal,
     dataLoaded,
-    syncStatus,
     selectedDate,
-    otherCurrency,
     collectionNames,
     filteredProducts,
     filteredOrders,
@@ -347,7 +305,6 @@ export function useDashboardEGP() {
     handleSuccess,
     handleEdit,
     handleLogout,
-    handleSyncProduct,
     handleConfirmPayment,
     formatDate
   }

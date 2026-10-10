@@ -1,14 +1,12 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useNavigate } from 'react-router-dom'
-import DashboardPI from './DashboardPi'
+import { signOut } from 'firebase/auth'
+import { auth } from '../services/firebase'
 import DashboardEGP from './DashboardEGP'
-import DashboardDollar from './DashboardDollar'
 
 const TABS = [
-  { id: 'pi',     icon: 'π', name: 'Pi Network', desc: 'Web3 Store',       color: '#d4a017' },
   { id: 'egp',    icon: '£', name: 'EGP Store',  desc: 'Cash on Delivery', color: '#818cf8' },
-  { id: 'dollar', icon: '$', name: 'Global Store',desc: 'USD Payments',     color: '#10b981' },
 ]
 
 const SWITCHER_HEIGHT = 44   // ← reduced from 58
@@ -16,7 +14,7 @@ const SWITCHER_HEIGHT = 44   // ← reduced from 58
 export default function DashboardRouter() {
   const { currentUser } = useAuth()
   const navigate = useNavigate()
-  const [activeDashboard, setActiveDashboard] = useState('pi')
+  const [activeDashboard, setActiveDashboard] = useState('egp')
   const [isTransitioning, setIsTransitioning] = useState(false)
 
   useEffect(() => {
@@ -70,6 +68,31 @@ export default function DashboardRouter() {
           border-right: 1px solid rgba(255,255,255,0.07);
           margin-right: 4px;
           flex-shrink: 0;
+        }
+        .dr-signout {
+          margin-left: auto;
+          flex-shrink: 0;
+          align-self: center;
+          background: transparent;
+          border: 1px solid rgba(255,255,255,0.14);
+          border-radius: 6px;
+          color: rgba(255,255,255,0.55);
+          font-family: inherit;
+          font-size: 0.72rem;
+          font-weight: 600;
+          letter-spacing: 0.4px;
+          padding: 6px 12px;
+          cursor: pointer;
+          transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+        }
+        .dr-signout:hover {
+          background: rgba(239,68,68,0.10);
+          border-color: rgba(239,68,68,0.45);
+          color: #fca5a5;
+        }
+        .dr-signout:focus-visible {
+          outline: 2px solid #818cf8;
+          outline-offset: 2px;
         }
         .dr-brand-dot {
           width: 6px; height: 6px;
@@ -284,14 +307,15 @@ export default function DashboardRouter() {
               </button>
             ))}
           </div>
+          <button className="dr-signout" onClick={() => signOut(auth)} title="Sign out">
+            Sign out
+          </button>
         </div>
       </div>
 
       {/* ── Page content ── */}
       <div className={`dr-body${isTransitioning ? ' fading' : ''}`}>
-        {activeDashboard === 'pi'     && <DashboardPI />}
-        {activeDashboard === 'egp'    && <DashboardEGP />}
-        {activeDashboard === 'dollar' && <DashboardDollar />}
+{activeDashboard === 'egp'    && <DashboardEGP />}
       </div>
     </div>
   )

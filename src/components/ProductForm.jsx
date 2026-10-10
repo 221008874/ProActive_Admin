@@ -88,7 +88,7 @@ export default function ProductForm({ product = null, onSuccess, currency, colle
     }
   }
 
-  const currencySymbol = currency === 'PI' ? 'π' : currency === 'EGP' ? '£' : '$'
+  const currencySymbol = currency === 'EGP' ? '£' : '$'
   const stockVal = parseInt(formData.stock)
 
   return (

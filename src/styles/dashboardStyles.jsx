@@ -1,4 +1,6 @@
-export const createStyles = (theme, otherTheme, isMobile, isTablet) => ({
+// otherTheme defaults to the store's own theme: it only tinted the cross-store
+// sync button, which no longer exists now that a single store remains.
+export const createStyles = (theme, otherTheme = theme, isMobile, isTablet) => ({
   dashboard: {
     minHeight: '100vh',
     background: '#0a0a0f',

@@ -57,7 +57,6 @@ const EGYPT_GOVERNORATES = [
 
 export default function DashboardEGP() {
   const theme = themes.egp
-  const otherTheme = themes.pi
   
   const { currentUser } = useAuth()
   const navigate = useNavigate()
@@ -75,9 +74,7 @@ export default function DashboardEGP() {
     activeTab,
     confirmPaymentModal,
     dataLoaded,
-    syncStatus,
     selectedDate,
-    otherCurrency,
     collectionNames,
     filteredProducts,
     filteredOrders,
@@ -95,7 +92,6 @@ export default function DashboardEGP() {
     handleSuccess,
     handleEdit,
     handleLogout,
-    handleSyncProduct,
     handleConfirmPayment,
     formatDate
   } = useDashboardEGP()
@@ -128,7 +124,7 @@ const [isGeneratingPDF, setIsGeneratingPDF] = useState(false)
   const [isGeneratingCoupons, setIsGeneratingCoupons] = useState(false)
   const [couponError, setCouponError] = useState(null)
 
-  const s = createStyles(theme, otherTheme, isMobile, isTablet)
+  const s = createStyles(theme, undefined, isMobile, isTablet)
 
   // FIXED: Load operations - initialize governorates if not exist
   const loadOperations = async () => {
@@ -811,7 +807,7 @@ const generateCouponsPDF = async () => {
     { id: 'orders', icon: '🛒', label: 'Orders', count: filteredOrders.length },
     { id: 'confirmed', icon: '✅', label: 'Confirmed', count: filteredConfirmedPayments.length },
     { id: 'coupons', icon: '🎫', label: 'Coupons', count: coupons.length },
-    { id: 'operations', icon: '⚙️', label: 'Operations', count: 27 } // Fixed count
+    { id: 'operations', icon: '⚙️', label: 'Operations', count: EGYPT_GOVERNORATES.length }
   ]
 
   return (
@@ -1227,18 +1223,6 @@ const generateCouponsPDF = async () => {
                 onMouseLeave={(e) => { e.target.style.background = '#f1f5f9'; e.target.style.color = '#64748b' }}>✕ Close</button>
             </div>
             <ProductForm product={editingProduct} onSuccess={handleSuccess} currency="EGP" collectionName={collectionNames.products} />
-            
-            {editingProduct && (
-              <div style={{marginTop: 24, paddingTop: 24, borderTop: '2px solid #f1f5f9'}}>
-                <button onClick={() => handleSyncProduct(editingProduct)} disabled={syncStatus === 'syncing'} style={s.syncButton(syncStatus)} className={syncStatus === 'syncing' ? 'sync-pulse' : ''}>
-                  {syncStatus === 'syncing' && '⏳ Syncing...'}
-                  {syncStatus === 'synced' && '✅ Synced!'}
-                  {syncStatus === 'error' && '❌ Error'}
-                  {!syncStatus && <>🔄 Sync to {otherCurrency} Store</>}
-                </button>
-                <p style={s.syncNote}>This will copy "{editingProduct.name}" to the <strong>{otherCurrency}</strong> products collection</p>
-              </div>
-            )}
           </div>
         )}
 
