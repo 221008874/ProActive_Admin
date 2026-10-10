@@ -1,13 +1,11 @@
-import { useEffect, useState } from 'react'
+﻿import { useEffect, useState } from 'react'
+import { PageTitle, StatusPill, Field, Summary, thumb, formatEGP, loc, Count } from '../ui'
 import { useAuth } from '../context/AuthContext'
 import { useNavigate } from 'react-router-dom'
 import ProductForm from '../components/ProductForm'
 import { useDashboardEGP } from '../hooks/useDashboardEGP'
-import { themes } from '../config/themes'
-import { createStyles } from '../styles/dashboardStyles'
 import { db } from '../services/firebase'
 import { jsPDF } from 'jspdf'
-import html2canvas from 'html2canvas'
 import QRCode from 'qrcode'
 import { 
   collection, 
@@ -26,54 +24,49 @@ import {
 
 // FIXED: Complete list of Egypt's 27 governorates with fixed IDs
 const EGYPT_GOVERNORATES = [
-  { id: 'cairo', name: 'Cairo', nameAr: 'القاهرة', defaultCost: 50 },
-  { id: 'giza', name: 'Giza', nameAr: 'الجيزة', defaultCost: 50 },
-  { id: 'alexandria', name: 'Alexandria', nameAr: 'الإسكندرية', defaultCost: 60 },
-  { id: 'qalyubia', name: 'Qalyubia', nameAr: 'القليوبية', defaultCost: 55 },
-  { id: 'monufia', name: 'Monufia', nameAr: 'المنوفية', defaultCost: 60 },
-  { id: 'gharbia', name: 'Gharbia', nameAr: 'الغربية', defaultCost: 65 },
-  { id: 'dakahlia', name: 'Dakahlia', nameAr: 'الدقهلية', defaultCost: 65 },
-  { id: 'sharkia', name: 'Sharqia', nameAr: 'الشرقية', defaultCost: 65 },
-  { id: 'beheira', name: 'Beheira', nameAr: 'البحيرة', defaultCost: 70 },
-  { id: 'kafr_sheikh', name: 'Kafr El Sheikh', nameAr: 'كفر الشيخ', defaultCost: 75 },
-  { id: 'damietta', name: 'Damietta', nameAr: 'دمياط', defaultCost: 70 },
-  { id: 'port_said', name: 'Port Said', nameAr: 'بورسعيد', defaultCost: 80 },
-  { id: 'ismailia', name: 'Ismailia', nameAr: 'الإسماعيلية', defaultCost: 75 },
-  { id: 'suez', name: 'Suez', nameAr: 'السويس', defaultCost: 75 },
-  { id: 'matrouh', name: 'Matrouh', nameAr: 'مطروح', defaultCost: 100 },
-  { id: 'north_sinai', name: 'North Sinai', nameAr: 'شمال سيناء', defaultCost: 120 },
-  { id: 'south_sinai', name: 'South Sinai', nameAr: 'جنوب سيناء', defaultCost: 130 },
-  { id: 'faiyum', name: 'Faiyum', nameAr: 'الفيوم', defaultCost: 70 },
-  { id: 'beni_suef', name: 'Beni Suef', nameAr: 'بني سويف', defaultCost: 75 },
-  { id: 'minya', name: 'Minya', nameAr: 'المنيا', defaultCost: 80 },
-  { id: 'asyut', name: 'Asyut', nameAr: 'أسيوط', defaultCost: 85 },
-  { id: 'sohag', name: 'Sohag', nameAr: 'سوهاج', defaultCost: 90 },
-  { id: 'qena', name: 'Qena', nameAr: 'قنا', defaultCost: 95 },
-  { id: 'luxor', name: 'Luxor', nameAr: 'الأقصر', defaultCost: 100 },
-  { id: 'aswan', name: 'Aswan', nameAr: 'أسوان', defaultCost: 110 },
-  { id: 'red_sea', name: 'Red Sea', nameAr: 'البحر الأحمر', defaultCost: 120 },
-  { id: 'new_valley', name: 'New Valley', nameAr: 'الوادي الجديد', defaultCost: 130 }
+  { id: 'cairo', name: 'Cairo', nameAr: 'ط§ظ„ظ‚ط§ظ‡ط±ط©', defaultCost: 50 },
+  { id: 'giza', name: 'Giza', nameAr: 'ط§ظ„ط¬ظٹط²ط©', defaultCost: 50 },
+  { id: 'alexandria', name: 'Alexandria', nameAr: 'ط§ظ„ط¥ط³ظƒظ†ط¯ط±ظٹط©', defaultCost: 60 },
+  { id: 'qalyubia', name: 'Qalyubia', nameAr: 'ط§ظ„ظ‚ظ„ظٹظˆط¨ظٹط©', defaultCost: 55 },
+  { id: 'monufia', name: 'Monufia', nameAr: 'ط§ظ„ظ…ظ†ظˆظپظٹط©', defaultCost: 60 },
+  { id: 'gharbia', name: 'Gharbia', nameAr: 'ط§ظ„ط؛ط±ط¨ظٹط©', defaultCost: 65 },
+  { id: 'dakahlia', name: 'Dakahlia', nameAr: 'ط§ظ„ط¯ظ‚ظ‡ظ„ظٹط©', defaultCost: 65 },
+  { id: 'sharkia', name: 'Sharqia', nameAr: 'ط§ظ„ط´ط±ظ‚ظٹط©', defaultCost: 65 },
+  { id: 'beheira', name: 'Beheira', nameAr: 'ط§ظ„ط¨ط­ظٹط±ط©', defaultCost: 70 },
+  { id: 'kafr_sheikh', name: 'Kafr El Sheikh', nameAr: 'ظƒظپط± ط§ظ„ط´ظٹط®', defaultCost: 75 },
+  { id: 'damietta', name: 'Damietta', nameAr: 'ط¯ظ…ظٹط§ط·', defaultCost: 70 },
+  { id: 'port_said', name: 'Port Said', nameAr: 'ط¨ظˆط±ط³ط¹ظٹط¯', defaultCost: 80 },
+  { id: 'ismailia', name: 'Ismailia', nameAr: 'ط§ظ„ط¥ط³ظ…ط§ط¹ظٹظ„ظٹط©', defaultCost: 75 },
+  { id: 'suez', name: 'Suez', nameAr: 'ط§ظ„ط³ظˆظٹط³', defaultCost: 75 },
+  { id: 'matrouh', name: 'Matrouh', nameAr: 'ظ…ط·ط±ظˆط­', defaultCost: 100 },
+  { id: 'north_sinai', name: 'North Sinai', nameAr: 'ط´ظ…ط§ظ„ ط³ظٹظ†ط§ط،', defaultCost: 120 },
+  { id: 'south_sinai', name: 'South Sinai', nameAr: 'ط¬ظ†ظˆط¨ ط³ظٹظ†ط§ط،', defaultCost: 130 },
+  { id: 'faiyum', name: 'Faiyum', nameAr: 'ط§ظ„ظپظٹظˆظ…', defaultCost: 70 },
+  { id: 'beni_suef', name: 'Beni Suef', nameAr: 'ط¨ظ†ظٹ ط³ظˆظٹظپ', defaultCost: 75 },
+  { id: 'minya', name: 'Minya', nameAr: 'ط§ظ„ظ…ظ†ظٹط§', defaultCost: 80 },
+  { id: 'asyut', name: 'Asyut', nameAr: 'ط£ط³ظٹظˆط·', defaultCost: 85 },
+  { id: 'sohag', name: 'Sohag', nameAr: 'ط³ظˆظ‡ط§ط¬', defaultCost: 90 },
+  { id: 'qena', name: 'Qena', nameAr: 'ظ‚ظ†ط§', defaultCost: 95 },
+  { id: 'luxor', name: 'Luxor', nameAr: 'ط§ظ„ط£ظ‚طµط±', defaultCost: 100 },
+  { id: 'aswan', name: 'Aswan', nameAr: 'ط£ط³ظˆط§ظ†', defaultCost: 110 },
+  { id: 'red_sea', name: 'Red Sea', nameAr: 'ط§ظ„ط¨ط­ط± ط§ظ„ط£ط­ظ…ط±', defaultCost: 120 },
+  { id: 'new_valley', name: 'New Valley', nameAr: 'ط§ظ„ظˆط§ط¯ظٹ ط§ظ„ط¬ط¯ظٹط¯', defaultCost: 130 }
 ]
 
 export default function DashboardEGP() {
-  const theme = themes.egp
+  const theme = { symbol: 'EGP', name: 'EGP Store', color: 'var(--pa-ink)', lightBg: 'var(--pa-stone)' }
   
   const { currentUser } = useAuth()
   const navigate = useNavigate()
   
   const {
     isReady,
-    isMobile,
-    isTablet,
-    products,
     showForm,
     editingProduct,
     searchQuery,
     deleteConfirm,
-    isLoading,
     activeTab,
     confirmPaymentModal,
-    dataLoaded,
     selectedDate,
     collectionNames,
     filteredProducts,
@@ -81,9 +74,7 @@ export default function DashboardEGP() {
     filteredConfirmedPayments,
     dateButtons,
     setSearchQuery,
-    setActiveTab,
     setShowForm,
-    setEditingProduct,
     setDeleteConfirm,
     setConfirmPaymentModal,
     setSelectedDate,
@@ -91,7 +82,6 @@ export default function DashboardEGP() {
     handleDelete,
     handleSuccess,
     handleEdit,
-    handleLogout,
     handleConfirmPayment,
     formatDate
   } = useDashboardEGP()
@@ -105,17 +95,12 @@ export default function DashboardEGP() {
   const [operationsLoading, setOperationsLoading] = useState(false)
 const [isGeneratingPDF, setIsGeneratingPDF] = useState(false)
 
-  const [hoveredProduct, setHoveredProduct] = useState(null)
-  const [hoveredCard, setHoveredCard] = useState(null)
-  const [hoveredButton, setHoveredButton] = useState(null)
-  const [hoveredModalBtn, setHoveredModalBtn] = useState({})
 
   // Coupon states
   const [coupons, setCoupons] = useState([])
   const [showCouponForm, setShowCouponForm] = useState(false)
   const [editingCoupon, setEditingCoupon] = useState(null)
   const [deleteCouponConfirm, setDeleteCouponConfirm] = useState(null)
-  const [couponSearchQuery, setCouponSearchQuery] = useState('')
   const [couponFormData, setCouponFormData] = useState({
     amount: '',
     duration: '',
@@ -124,7 +109,6 @@ const [isGeneratingPDF, setIsGeneratingPDF] = useState(false)
   const [isGeneratingCoupons, setIsGeneratingCoupons] = useState(false)
   const [couponError, setCouponError] = useState(null)
 
-  const s = createStyles(theme, undefined, isMobile, isTablet)
 
   // FIXED: Load operations - initialize governorates if not exist
   const loadOperations = async () => {
@@ -227,10 +211,10 @@ const generateCouponsPDF = async () => {
   setIsGeneratingPDF(true)
 
   try {
-    // ═══════════════════════════════════════════════════════════
+    // â•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گ
     // A4 PAGE GEOMETRY
-    // A4 = 210 × 297 mm
-    // ═══════════════════════════════════════════════════════════
+    // A4 = 210 أ— 297 mm
+    // â•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گ
     const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
     const PW = 210
     const PH = 297
@@ -244,27 +228,27 @@ const generateCouponsPDF = async () => {
     const COLS = 2
     const ROWS = 4
 
-    // Coupon card size — calculated to fill the grid exactly
+    // Coupon card size â€” calculated to fill the grid exactly
     // CW = (210 - 11*2 - 7)  / 2 = 85.5 mm
     // CH = (297 - 24 - 13 - 11*2 - 6*3) / 4 = (238 - 18) / 4 = 55 mm
     const CW = (PW - PAD * 2 - GAPX) / COLS          // 85.5 mm
     const CH = (PH - HDR - FTR - PAD * 2 - GAPY * (ROWS - 1)) / ROWS  // 55 mm
 
-    // ── Inside each card the layout is: ────────────────────────
+    // â”€â”€ Inside each card the layout is: â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     //
-    //   ┌────────────────────────────────────────────────────────┐
-    //   │  [  NAVY HEADER BAND — full width  ]  [ AMOUNT BADGE ]│  0–14
-    //   ├──────────────────────── gold strip ────────────────────┤  14–15.5
-    //   │                                    │                   │
-    //   │  LEFT TEXT COLUMN (0–57mm wide)    │  RIGHT QR COLUMN  │  15.5–CH
-    //   │  • COUPON CODE label               │  (57–CW, 28.5mm)  │
-    //   │  • code value                      │  QR 28×28         │
-    //   │  • gold underline                  │  "Scan to redeem" │
-    //   │  • expiry pill                     │                   │
-    //   │  • single-use pill                 │                   │
-    //   │  • ACTIVE badge                    │                   │
-    //   ├───────────────── gold bottom bar ──────────────────────┤  CH-1.5–CH
-    //   └────────────────────────────────────────────────────────┘
+    //   â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”گ
+    //   â”‚  [  NAVY HEADER BAND â€” full width  ]  [ AMOUNT BADGE ]â”‚  0â€“14
+    //   â”œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ gold strip â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¤  14â€“15.5
+    //   â”‚                                    â”‚                   â”‚
+    //   â”‚  LEFT TEXT COLUMN (0â€“57mm wide)    â”‚  RIGHT QR COLUMN  â”‚  15.5â€“CH
+    //   â”‚  â€¢ COUPON CODE label               â”‚  (57â€“CW, 28.5mm)  â”‚
+    //   â”‚  â€¢ code value                      â”‚  QR 28أ—28         â”‚
+    //   â”‚  â€¢ gold underline                  â”‚  "Scan to redeem" â”‚
+    //   â”‚  â€¢ expiry pill                     â”‚                   â”‚
+    //   â”‚  â€¢ single-use pill                 â”‚                   â”‚
+    //   â”‚  â€¢ ACTIVE badge                    â”‚                   â”‚
+    //   â”œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ gold bottom bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¤  CH-1.5â€“CH
+    //   â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”ک
     //
     //   Divider line between left/right at x = cx + 57
 
@@ -274,9 +258,9 @@ const generateCouponsPDF = async () => {
     const L_PAD   = 5     // left-column inner padding
     const R_PAD   = 4     // right-column inner padding from divider
 
-    // ═══════════════════════════════════════════════════════════
+    // â•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گ
     // COLOURS
-    // ═══════════════════════════════════════════════════════════
+    // â•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گ
     const C = {
       navy:     [10,  18,  45],
       navyMid:  [18,  32,  72],
@@ -294,9 +278,9 @@ const generateCouponsPDF = async () => {
       perf:     [190, 202, 218],
     }
 
-    // ═══════════════════════════════════════════════════════════
+    // â•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گ
     // DRAW HELPERS
-    // ═══════════════════════════════════════════════════════════
+    // â•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گ
     const fillR = (x, y, w, h, r, col) => {
       pdf.setFillColor(...col)
       pdf.roundedRect(x, y, w, h, r, r, 'F')
@@ -320,9 +304,9 @@ const generateCouponsPDF = async () => {
       pdf.text(label, x + w / 2, y + h / 2 + fontSize * 0.18, { align: 'center' })
     }
 
-    // ═══════════════════════════════════════════════════════════
+    // â•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گ
     // PAGE HEADER
-    // ═══════════════════════════════════════════════════════════
+    // â•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گ
     const drawHeader = (pageNum, totalPages) => {
       // Navy bg
       pdf.setFillColor(...C.navy)
@@ -353,14 +337,14 @@ const generateCouponsPDF = async () => {
         PW - PAD, 13, { align: 'right' }
       )
       pdf.text(
-        `${activeUnusedCoupons.length} coupons  ·  Page ${pageNum + 1} / ${totalPages}`,
+        `${activeUnusedCoupons.length} coupons  آ·  Page ${pageNum + 1} / ${totalPages}`,
         PW - PAD, 20.5, { align: 'right' }
       )
     }
 
-    // ═══════════════════════════════════════════════════════════
+    // â•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گ
     // PAGE FOOTER
-    // ═══════════════════════════════════════════════════════════
+    // â•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گ
     const drawFooter = () => {
       const fy = PH - FTR
       pdf.setFillColor(...C.navy)
@@ -372,37 +356,37 @@ const generateCouponsPDF = async () => {
       pdf.setFontSize(6)
       pdf.setTextColor(...C.silver)
       pdf.text(
-        'Valid for single use only  ·  Non-transferable  ·  Scan QR code at checkout to apply discount',
+        'Valid for single use only  آ·  Non-transferable  آ·  Scan QR code at checkout to apply discount',
         PW / 2, fy + 5.5, { align: 'center' }
       )
       pdf.setTextColor(...C.goldLt)
       pdf.text('elhamdindustriesegp.vercel.app', PW / 2, fy + 10.5, { align: 'center' })
     }
 
-    // ═══════════════════════════════════════════════════════════
+    // â•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گ
     // COUPON CARD
-    // ═══════════════════════════════════════════════════════════
+    // â•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گ
     const drawCoupon = async (coupon, cx, cy) => {
       const R = 3.5   // card corner radius
 
-      // ── 1. Shadow
+      // â”€â”€ 1. Shadow
       fillR(cx + 1.5, cy + 1.5, CW, CH, R, C.shadow)
 
-      // ── 2. Card base
+      // â”€â”€ 2. Card base
       fillR(cx, cy, CW, CH, R, C.bg)
 
-      // ── 3. Navy top band (full width, BAND_H=14mm)
+      // â”€â”€ 3. Navy top band (full width, BAND_H=14mm)
       pdf.setFillColor(...C.navy)
       pdf.roundedRect(cx, cy, CW, BAND_H, R, R, 'F')
       // Square off the bottom edge of the rounded rect
       pdf.rect(cx, cy + BAND_H - R, CW, R, 'F')
 
-      // ── 4. Gold strip right below band
+      // â”€â”€ 4. Gold strip right below band
       pdf.setFillColor(...C.gold)
       pdf.rect(cx, cy + BAND_H, CW, 1.5, 'F')
 
-      // ── 5. Amount badge — right-aligned inside band
-      //       Pill: 30×9mm, vertically centred in 14mm band → y = cy + 2.5
+      // â”€â”€ 5. Amount badge â€” right-aligned inside band
+      //       Pill: 30أ—9mm, vertically centred in 14mm band â†’ y = cy + 2.5
       const BW = 30, BH = 9
       const bx = cx + CW - BW - 5
       const by = cy + (BAND_H - BH) / 2
@@ -416,7 +400,7 @@ const generateCouponsPDF = async () => {
         { align: 'center' }
       )
 
-      // ── 6. Band text — left side (stays clear of badge)
+      // â”€â”€ 6. Band text â€” left side (stays clear of badge)
       pdf.setFont('helvetica', 'bold')
       pdf.setFontSize(7)
       pdf.setTextColor(...C.white)
@@ -427,14 +411,14 @@ const generateCouponsPDF = async () => {
       pdf.setTextColor(...C.goldLt)
       pdf.text('MEMBER COUPON', cx + L_PAD, cy + 12)
 
-      // ── 7. Vertical divider line (left/right column separator)
+      // â”€â”€ 7. Vertical divider line (left/right column separator)
       //       Runs from below gold strip to above gold bottom bar
       const divX = cx + DIVX
       pdf.setDrawColor(...C.border)
       pdf.setLineWidth(0.3)
       pdf.line(divX, cy + BAND_H + 1.5, divX, cy + CH - 3)
 
-      // ── 8. LEFT COLUMN content
+      // â”€â”€ 8. LEFT COLUMN content
       //       All y coords are absolute (cy + offset)
       const LX = cx + L_PAD   // left content x
 
@@ -450,7 +434,7 @@ const generateCouponsPDF = async () => {
       pdf.setTextColor(...C.navy)
       pdf.text(coupon.code, LX, cy + 26)
 
-      // Gold underline — constrained to left column width
+      // Gold underline â€” constrained to left column width
       const maxCodeW = DIVX - L_PAD - 3
       pdf.setFont('courier', 'bold'); pdf.setFontSize(10.5)
       const codeW = Math.min(pdf.getTextWidth(coupon.code), maxCodeW)
@@ -471,7 +455,7 @@ const generateCouponsPDF = async () => {
       fillR(LX, cy + 37.5, PW_LEFT, 6, 2, C.greenPale)
       pdf.setFontSize(5.5)
       pdf.setTextColor(...C.green)
-      pdf.text('✓  Single use  ·  Non-transferable', LX + 2.5, cy + 41.5)
+      pdf.text('âœ“  Single use  آ·  Non-transferable', LX + 2.5, cy + 41.5)
 
       // ACTIVE badge: y=cy+45
       fillR(LX, cy + 45, 20, 6, 2, C.green)
@@ -480,10 +464,10 @@ const generateCouponsPDF = async () => {
       pdf.setTextColor(...C.white)
       pdf.text('ACTIVE', LX + 10, cy + 49, { align: 'center' })
 
-      // ── 9. RIGHT COLUMN — QR code
-      //       Available width  = CW - DIVX - R_PAD*2 = 85.5-57-8 = 20.5mm  ← too narrow for 28mm QR
-      //       ▶ Widen right column: shift divider to 52mm, QR=28mm
-      //         divX = cx+52, QR starts at divX+R_PAD = cx+56, QR_SZ=28, right edge=cx+84 < cx+CW ✓
+      // â”€â”€ 9. RIGHT COLUMN â€” QR code
+      //       Available width  = CW - DIVX - R_PAD*2 = 85.5-57-8 = 20.5mm  â†گ too narrow for 28mm QR
+      //       â–¶ Widen right column: shift divider to 52mm, QR=28mm
+      //         divX = cx+52, QR starts at divX+R_PAD = cx+56, QR_SZ=28, right edge=cx+84 < cx+CW âœ“
 
       // QR is centred in the right column
       const rightColW = CW - DIVX - 1   // remaining width after divider
@@ -499,7 +483,7 @@ const generateCouponsPDF = async () => {
       )
       if (qrUrl) pdf.addImage(qrUrl, 'PNG', QX, QY, QR_SZ, QR_SZ)
 
-      // "Scan to redeem" below QR — centred in right column
+      // "Scan to redeem" below QR â€” centred in right column
       const scanY = QY + QR_SZ + 5
       if (scanY < cy + CH - 3) {
         pdf.setFont('helvetica', 'normal')
@@ -508,17 +492,17 @@ const generateCouponsPDF = async () => {
         pdf.text('Scan to redeem', QX + QR_SZ / 2, scanY, { align: 'center' })
       }
 
-      // ── 10. Gold bottom bar
+      // â”€â”€ 10. Gold bottom bar
       pdf.setFillColor(...C.gold)
       pdf.rect(cx + 6, cy + CH - 1.5, CW - 12, 1.5, 'F')
 
-      // ── 11. Card border
+      // â”€â”€ 11. Card border
       strokeR(cx, cy, CW, CH, R, C.border, 0.2)
     }
 
-    // ═══════════════════════════════════════════════════════════
+    // â•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گ
     // RENDER ALL PAGES
-    // ═══════════════════════════════════════════════════════════
+    // â•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گ
     const PER_PAGE    = COLS * ROWS
     const TOTAL_PAGES = Math.ceil(activeUnusedCoupons.length / PER_PAGE)
     const GRID_TOP    = HDR + PAD
@@ -741,10 +725,12 @@ const generateCouponsPDF = async () => {
     }
   }
 
-  // Filter coupons
-  const filteredCoupons = coupons.filter(coupon => 
-    coupon.code.toLowerCase().includes(couponSearchQuery.toLowerCase()) ||
-    coupon.amount.toString().includes(couponSearchQuery)
+  // Filter coupons. Uses the tab's shared search box (`searchQuery`) — the
+  // design-system refactor replaced the per-tab coupon search input with the one
+  // search field at the top of the page, so the filter reads that.
+  const filteredCoupons = coupons.filter(coupon =>
+    coupon.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    coupon.amount.toString().includes(searchQuery)
   )
 
   // Check if coupon is expired
@@ -763,1414 +749,768 @@ const generateCouponsPDF = async () => {
     loadOperations()
   }, [currentUser, navigate])
 
-  useEffect(() => {
-    const styleId = 'dashboard-styles-egp'
-    if (!document.getElementById(styleId)) {
-      const styleSheet = document.createElement('style')
-      styleSheet.id = styleId
-      styleSheet.textContent = `
-        @keyframes slideDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
-        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
-        @keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(15, 23, 42, 0.4); } 50% { box-shadow: 0 0 0 10px rgba(15, 23, 42, 0); } }
-        * { box-sizing: border-box; }
-        html, body { margin: 0; padding: 0; }
-        .skeleton { background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 8px; }
-        .sync-pulse { animation: pulse 2s infinite; }
-        .dashboard-loading { min-height: 100vh; background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); display: flex; align-items: center; justify-content: center; }
-        .date-filter-scroll { display: flex; gap: 8px; overflow-x: auto; padding: 4px; scroll-behavior: smooth; -webkit-overflow-scrolling: touch; scrollbar-width: thin; scrollbar-color: ${theme.color} #f1f5f9; }
-        .date-filter-scroll::-webkit-scrollbar { height: 6px; }
-        .date-filter-scroll::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 3px; }
-        .date-filter-scroll::-webkit-scrollbar-thumb { background: ${theme.color}; border-radius: 3px; }
-        @media (max-width: 768px) { table { display: block; overflow-x: auto; white-space: nowrap; } }
-      `
-      document.head.appendChild(styleSheet)
-    }
-  }, [])
-
   if (!isReady) {
     return (
-      <div className="dashboard-loading">
-        <div style={{fontSize: '2rem', color: '#94a3b8', animation: 'spin 1s linear infinite'}}>⟳</div>
+      <div className="pa-container" role="status" style={{ paddingBlock: 64, textAlign: 'center' }}>
+        <span className="pa-subtitle">Loading…</span>
       </div>
     )
   }
 
+  // The nav now lives in the design system's AdminShell (see DashboardRouter),
+  // so the dashboard no longer renders its own tab bar or header. What is left
+  // is the working area: actions, the forms and the tables for the active tab.
   const onConfirmPayment = (order) => handleConfirmPayment(order, currentUser)
 
-  // FIXED: Updated tabs array
-  const navigationTabs = [
-    { id: 'products', icon: '📦', label: 'Products', count: products.length },
-    { id: 'orders', icon: '🛒', label: 'Orders', count: filteredOrders.length },
-    { id: 'confirmed', icon: '✅', label: 'Confirmed', count: filteredConfirmedPayments.length },
-    { id: 'coupons', icon: '🎫', label: 'Coupons', count: coupons.length },
-    { id: 'operations', icon: '⚙️', label: 'Operations', count: EGYPT_GOVERNORATES.length }
-  ]
+  const tabTitle = {
+    products: 'Products',
+    orders: 'Pending EGP orders',
+    confirmed: 'Confirmed for shipping',
+    coupons: 'Coupons',
+    operations: 'Operations'
+  }[activeTab] ?? 'Dashboard'
+
+  const tabSubtitle = {
+    products: 'Edit the catalogue. Products carry colours, sizes and a stock grid.',
+    orders: 'Cash on delivery orders awaiting confirmation for shipping',
+    confirmed: 'Cash on delivery orders confirmed and ready for shipping',
+    coupons: `Generate, edit and revoke ${collectionNames.coupons}`,
+    operations: "Configure shipping costs for Egypt's 27 governorates"
+  }[activeTab] ?? ''
 
   return (
-    <div style={s.dashboard}>
-      {/* Header */}
-      <header style={s.header}>
-        <div style={s.headerContent}>
-          <div style={s.headerLeft}>
-            <h1 style={s.headerTitle}>{theme.symbol} Dashboard</h1>
-            <span style={s.headerBadge}>{theme.name}</span>
-            {!isMobile && <span style={{...s.headerBadge, background: theme.lightBg, color: theme.textColor}}>📦 {collectionNames.products}</span>}
-          </div>
-          <button 
-            onClick={handleLogout} 
-            style={s.logoutBtn}
-            onMouseEnter={(e) => { e.target.style.background = '#0f172a'; e.target.style.color = '#ffffff'; e.target.style.borderColor = '#0f172a'; e.target.style.transform = 'translateY(-2px)' }}
-            onMouseLeave={(e) => { e.target.style.background = 'transparent'; e.target.style.color = '#0f172a'; e.target.style.borderColor = '#e2e8f0'; e.target.style.transform = 'translateY(0)' }}
-          >
-            🚪 Logout
-          </button>
-        </div>
-      </header>
-
-      <main style={s.main}>
-        {/* Navigation Tabs */}
-        <div style={s.navTabs}>
-          {navigationTabs.map(tab => (
-            <button key={tab.id} style={s.navTab(activeTab === tab.id)} onClick={() => setActiveTab(tab.id)}>
-              {tab.icon} {tab.label}
-              <span style={s.tabBadge(activeTab === tab.id)}>{tab.count}</span>
-            </button>
-          ))}
-        </div>
-
-        {/* Search/Actions Bar */}
-        {activeTab === 'products' && (
-          <div style={s.actionsBar}>
-            <button onClick={() => setShowForm(!showForm)} style={s.addBtn} onMouseEnter={() => setHoveredButton('add')} onMouseLeave={() => setHoveredButton(null)}>
-              <span>➕</span>{showForm ? 'Cancel' : 'Add Product'}
-            </button>
-            <div style={s.searchBox}>
-              <span style={{position: 'absolute', left: isMobile ? 10 : 12, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '1.2rem'}}>🔍</span>
-              <input type="text" placeholder="Search products..." style={s.searchInput} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-                onFocus={(e) => { e.target.style.borderColor = theme.color; e.target.style.boxShadow = `0 0 0 3px ${theme.color}1a` }}
-                onBlur={(e) => { e.target.style.borderColor = '#e2e8f0'; e.target.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.05)' }} />
-            </div>
-          </div>
-        )}
-
-        {(activeTab === 'orders' || activeTab === 'confirmed') && (
-          <div style={s.actionsBar}>
-            <div style={{...s.searchBox, maxWidth: '100%'}}>
-              <span style={{position: 'absolute', left: isMobile ? 10 : 12, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '1.2rem'}}>🔍</span>
-              <input type="text" placeholder={activeTab === 'orders' ? "Search by Order ID or product name..." : "Search confirmed orders..."} style={s.searchInput} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-                onFocus={(e) => { e.target.style.borderColor = theme.color; e.target.style.boxShadow = `0 0 0 3px ${theme.color}1a` }}
-                onBlur={(e) => { e.target.style.borderColor = '#e2e8f0'; e.target.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.05)' }} />
-            </div>
-          </div>
-        )}
-
-        {/* Coupons Actions Bar */}
-{activeTab === 'coupons' && (
-  <div style={s.actionsBar}>
-    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-      <button 
-        onClick={() => {
-          setShowCouponForm(!showCouponForm)
-          setEditingCoupon(null)
-          setCouponFormData({ amount: '', duration: '', quantity: 1 })
-        }} 
-        style={{...s.addBtn, background: showCouponForm ? '#e11d48' : theme.gradient}}
-        onMouseEnter={() => setHoveredButton('coupon-add')} 
-        onMouseLeave={() => setHoveredButton(null)}
-      >
-        <span>{showCouponForm ? '✕' : '🎫'}</span>
-        {showCouponForm ? 'Cancel' : 'Generate Coupons'}
-      </button>
-      
-      {/* NEW: Export PDF Button */}
-      <button 
-        onClick={generateCouponsPDF}
-        disabled={isGeneratingPDF}
-        style={{
-          ...s.addBtn,
-          background: isGeneratingPDF ? '#94a3b8' : 'linear-gradient(135deg, #059669 0%, #10b981 100%)',
-          opacity: isGeneratingPDF ? 0.7 : 1,
-          cursor: isGeneratingPDF ? 'not-allowed' : 'pointer'
-        }}
-        onMouseEnter={() => setHoveredButton('pdf-export')} 
-        onMouseLeave={() => setHoveredButton(null)}
-      >
-        <span>{isGeneratingPDF ? '⟳' : '📄'}</span>
-        {isGeneratingPDF ? 'Generating...' : 'Export PDF'}
-      </button>
-    </div>
-    
-    <div style={s.searchBox}>
-      <span style={{position: 'absolute', left: isMobile ? 10 : 12, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '1.2rem'}}>🔍</span>
-      <input 
-        type="text" 
-        placeholder="Search coupons by code or amount..." 
-        style={s.searchInput} 
-        value={couponSearchQuery} 
-        onChange={(e) => setCouponSearchQuery(e.target.value)}
-        onFocus={(e) => { e.target.style.borderColor = theme.color; e.target.style.boxShadow = `0 0 0 3px ${theme.color}1a` }}
-        onBlur={(e) => { e.target.style.borderColor = '#e2e8f0'; e.target.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.05)' }} 
-      />
-    </div>
-  </div>
-)}
-        {/* Date Filter for Confirmed Orders */}
-        {activeTab === 'confirmed' && (
-          <div style={s.dateFilterContainer}>
-            <div style={s.dateFilterLabel}>
-              📅 Filter by Date
-              <span style={{fontSize: '0.8rem', color: '#94a3b8', fontWeight: 500}}>
-                (Showing: {new Date(selectedDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })})
-              </span>
-            </div>
-            <div className="date-filter-scroll">
-              {dateButtons.map((btn) => (
-                <button key={btn.date} style={s.dateButton(selectedDate === btn.date, btn.isToday)} onClick={() => setSelectedDate(btn.date)}
-                  onMouseEnter={(e) => { if (selectedDate !== btn.date) { e.target.style.borderColor = theme.color; e.target.style.transform = 'translateY(-2px)' } }}
-                  onMouseLeave={(e) => { if (selectedDate !== btn.date) { e.target.style.borderColor = '#e2e8f0'; e.target.style.transform = 'translateY(0)' } }}>
-                  {btn.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Coupon Generation Form */}
-        {activeTab === 'coupons' && showCouponForm && (
-          <div style={s.formSection}>
-            <div style={s.formSectionHeader}>
-              <h3 style={s.formSectionTitle}>🎫 Generate New Coupons</h3>
-              <button onClick={() => setShowCouponForm(false)} style={s.closeBtn}>✕ Close</button>
-            </div>
-
-            <form onSubmit={handleGenerateCoupons} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: 16 }}>
-
-                {/* Amount */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-                  <label style={{ fontSize: '0.78rem', fontWeight: 700, color: 'rgba(255,255,255,0.65)', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
-                    Discount Amount (EGP) *
-                  </label>
-                  <input
-                    type="number" min="1" step="0.01" required
-                    value={couponFormData.amount}
-                    onChange={(e) => setCouponFormData(prev => ({ ...prev, amount: e.target.value }))}
-                    placeholder="e.g., 50"
-                    style={{
-                      width: '100%', padding: '11px 14px',
-                      background: 'rgba(255,255,255,0.06)',
-                      border: '1px solid rgba(255,255,255,0.12)',
-                      borderRadius: 8, fontSize: '0.92rem',
-                      color: '#f0f0f8', outline: 'none', transition: 'all 0.2s'
-                    }}
-                    onFocus={(e) => { e.target.style.borderColor = theme.color; e.target.style.boxShadow = `0 0 0 3px ${theme.color}22` }}
-                    onBlur={(e) => { e.target.style.borderColor = 'rgba(255,255,255,0.12)'; e.target.style.boxShadow = 'none' }}
-                  />
-                </div>
-
-                {/* Duration */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-                  <label style={{ fontSize: '0.78rem', fontWeight: 700, color: 'rgba(255,255,255,0.65)', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
-                    Validity (Days) *
-                  </label>
-                  <input
-                    type="number" min="1" max="365" required
-                    value={couponFormData.duration}
-                    onChange={(e) => setCouponFormData(prev => ({ ...prev, duration: e.target.value }))}
-                    placeholder="e.g., 30"
-                    style={{
-                      width: '100%', padding: '11px 14px',
-                      background: 'rgba(255,255,255,0.06)',
-                      border: '1px solid rgba(255,255,255,0.12)',
-                      borderRadius: 8, fontSize: '0.92rem',
-                      color: '#f0f0f8', outline: 'none', transition: 'all 0.2s'
-                    }}
-                    onFocus={(e) => { e.target.style.borderColor = theme.color; e.target.style.boxShadow = `0 0 0 3px ${theme.color}22` }}
-                    onBlur={(e) => { e.target.style.borderColor = 'rgba(255,255,255,0.12)'; e.target.style.boxShadow = 'none' }}
-                  />
-                </div>
-
-                {/* Quantity */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-                  <label style={{ fontSize: '0.78rem', fontWeight: 700, color: 'rgba(255,255,255,0.65)', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
-                    Quantity (1–100) *
-                  </label>
-                  <input
-                    type="number" min="1" max="100" required
-                    value={couponFormData.quantity}
-                    onChange={(e) => setCouponFormData(prev => ({ ...prev, quantity: parseInt(e.target.value) || 1 }))}
-                    placeholder="e.g., 10"
-                    style={{
-                      width: '100%', padding: '11px 14px',
-                      background: 'rgba(255,255,255,0.06)',
-                      border: '1px solid rgba(255,255,255,0.12)',
-                      borderRadius: 8, fontSize: '0.92rem',
-                      color: '#f0f0f8', outline: 'none', transition: 'all 0.2s'
-                    }}
-                    onFocus={(e) => { e.target.style.borderColor = theme.color; e.target.style.boxShadow = `0 0 0 3px ${theme.color}22` }}
-                    onBlur={(e) => { e.target.style.borderColor = 'rgba(255,255,255,0.12)'; e.target.style.boxShadow = 'none' }}
-                  />
-                </div>
-              </div>
-
-              {couponError && (
-                <div style={{
-                  padding: '12px 16px',
-                  background: 'rgba(239,68,68,0.12)',
-                  border: '1px solid rgba(239,68,68,0.30)',
-                  borderRadius: 8, color: '#fca5a5', fontSize: '0.88rem'
-                }}>
-                  ⚠️ {couponError}
-                </div>
-              )}
-
-              <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+    <>
+      <PageTitle
+        title={tabTitle}
+        subtitle={tabSubtitle}
+        actions={
+          <>
+            {activeTab === 'products' && (
+              <button
+                type="button"
+                className="pa-btn pa-btn--admin"
+                onClick={() => setShowForm(!showForm)}
+              >
+                {showForm ? 'Close form' : 'Add product'}
+              </button>
+            )}
+            {activeTab === 'coupons' && (
+              <>
                 <button
                   type="button"
+                  className="pa-btn pa-btn--outline pa-btn--admin"
                   onClick={() => setShowCouponForm(false)}
-                  style={{
-                    padding: '10px 20px',
-                    border: '1px solid rgba(255,255,255,0.14)',
-                    borderRadius: 9, background: 'rgba(255,255,255,0.07)',
-                    color: 'rgba(255,255,255,0.65)', fontWeight: 600,
-                    cursor: 'pointer', transition: 'all 0.2s', fontSize: '0.9rem'
-                  }}
-                  onMouseEnter={(e) => { e.target.style.background = 'rgba(255,255,255,0.12)'; e.target.style.color = '#fff' }}
-                  onMouseLeave={(e) => { e.target.style.background = 'rgba(255,255,255,0.07)'; e.target.style.color = 'rgba(255,255,255,0.65)' }}
+                  hidden={!showCouponForm}
                 >
-                  Cancel
+                  Close form
                 </button>
                 <button
-                  type="submit"
-                  disabled={isGeneratingCoupons}
-                  style={{
-                    padding: '10px 26px',
-                    border: 'none', borderRadius: 9,
-                    background: theme.color,
-                    color: '#ffffff', fontWeight: 700,
-                    cursor: isGeneratingCoupons ? 'not-allowed' : 'pointer',
-                    opacity: isGeneratingCoupons ? 0.6 : 1,
-                    transition: 'all 0.2s', fontSize: '0.9rem',
-                    display: 'inline-flex', alignItems: 'center', gap: 8,
-                    boxShadow: `0 4px 16px ${theme.color}44`
-                  }}
+                  type="button"
+                  className="pa-btn pa-btn--admin"
+                  onClick={() => setShowCouponForm(true)}
                 >
-                  {isGeneratingCoupons
-                    ? <><span style={{ animation: 'spin 1s linear infinite', display: 'inline-block' }}>⟳</span> Generating...</>
-                    : <>🎫 Generate {couponFormData.quantity > 1 ? `${couponFormData.quantity} Coupons` : 'Coupon'}</>
-                  }
+                  Generate coupons
                 </button>
-              </div>
-            </form>
-          </div>
-        )}
-
-       {/* Edit Coupon Modal */}
-        {editingCoupon && (
-          <div style={s.modalOverlay} onClick={() => setEditingCoupon(null)}>
-            <div style={{...s.modal, maxWidth: 500}} onClick={(e) => e.stopPropagation()}>
-              <div style={s.modalHeader}>
-                <h3 style={s.modalTitle}>✏️ Edit Coupon</h3>
-                <p style={s.modalSubtitle}>Update coupon details</p>
-              </div>
-
-              <form onSubmit={handleEditCoupon} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-
-                {/* Code display */}
-                <div>
-                  <label style={{ display: 'block', marginBottom: 6, fontSize: '0.72rem', fontWeight: 700, color: 'rgba(255,255,255,0.55)', textTransform: 'uppercase', letterSpacing: '1px' }}>
-                    Coupon Code
-                  </label>
-                  <div style={{
-                    padding: '11px 14px',
-                    background: 'rgba(255,255,255,0.06)',
-                    border: '1px solid rgba(255,255,255,0.10)',
-                    borderRadius: 8,
-                    fontFamily: "'JetBrains Mono', monospace",
-                    fontSize: '1rem',
-                    color: '#ffffff',
-                    fontWeight: 700,
-                    letterSpacing: '1.5px'
-                  }}>
-                    {editingCoupon.code}
-                  </div>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                  {/* Amount */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-                    <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'rgba(255,255,255,0.55)', textTransform: 'uppercase', letterSpacing: '1px' }}>
-                      Amount (EGP) *
-                    </label>
-                    <input
-                      type="number" min="1" step="0.01" required
-                      value={editingCoupon.amount}
-                      onChange={(e) => setEditingCoupon(prev => ({ ...prev, amount: e.target.value }))}
-                      style={{
-                        width: '100%', padding: '11px 14px',
-                        background: 'rgba(255,255,255,0.06)',
-                        border: '1px solid rgba(255,255,255,0.12)',
-                        borderRadius: 8, fontSize: '0.92rem',
-                        color: '#f0f0f8', outline: 'none', transition: 'all 0.2s'
-                      }}
-                      onFocus={(e) => { e.target.style.borderColor = theme.color; e.target.style.boxShadow = `0 0 0 3px ${theme.color}22` }}
-                      onBlur={(e) => { e.target.style.borderColor = 'rgba(255,255,255,0.12)'; e.target.style.boxShadow = 'none' }}
-                    />
-                  </div>
-
-                  {/* Duration */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-                    <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'rgba(255,255,255,0.55)', textTransform: 'uppercase', letterSpacing: '1px' }}>
-                      Extend Duration (Days)
-                    </label>
-                    <input
-                      type="number" min="1"
-                      value={editingCoupon.duration}
-                      onChange={(e) => setEditingCoupon(prev => ({ ...prev, duration: parseInt(e.target.value) || prev.duration }))}
-                      style={{
-                        width: '100%', padding: '11px 14px',
-                        background: 'rgba(255,255,255,0.06)',
-                        border: '1px solid rgba(255,255,255,0.12)',
-                        borderRadius: 8, fontSize: '0.92rem',
-                        color: '#f0f0f8', outline: 'none', transition: 'all 0.2s'
-                      }}
-                      onFocus={(e) => { e.target.style.borderColor = theme.color; e.target.style.boxShadow = `0 0 0 3px ${theme.color}22` }}
-                      onBlur={(e) => { e.target.style.borderColor = 'rgba(255,255,255,0.12)'; e.target.style.boxShadow = 'none' }}
-                    />
-                    <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.40)', marginTop: 2 }}>
-                      Expires: {editingCoupon.expiresAt?.toLocaleDateString()}
-                    </span>
-                  </div>
-                </div>
-
-                <div style={s.modalActions}>
-                  <button type="button" onClick={() => setEditingCoupon(null)}
-                    style={s.modalBtn('cancel', hoveredModalBtn.cancel)}
-                    onMouseEnter={() => setHoveredModalBtn({...hoveredModalBtn, cancel: true})}
-                    onMouseLeave={() => setHoveredModalBtn({...hoveredModalBtn, cancel: false})}>
-                    Cancel
-                  </button>
-                  <button type="submit"
-                    style={s.modalBtn('confirm', hoveredModalBtn.confirm)}
-                    onMouseEnter={() => setHoveredModalBtn({...hoveredModalBtn, confirm: true})}
-                    onMouseLeave={() => setHoveredModalBtn({...hoveredModalBtn, confirm: false})}>
-                    💾 Save Changes
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-
-        {/* Delete Coupon Confirmation */}
-        {deleteCouponConfirm && (
-          <div style={s.modalOverlay} onClick={() => setDeleteCouponConfirm(null)}>
-            <div style={s.modal} onClick={(e) => e.stopPropagation()}>
-              <div style={s.modalHeader}>
-                <h3 style={s.modalTitle}>🗑️ Delete Coupon</h3>
-                <p style={s.modalSubtitle}>Are you sure you want to delete this coupon?</p>
-              </div>
-              <div style={s.modalSection}>
-                <p style={s.deleteModalText}>
-                  You are about to delete:
-                  <span style={{...s.deleteModalProductName, fontFamily: 'monospace', letterSpacing: '1px'}}>
-                    🎫 {deleteCouponConfirm.code}
-                  </span>
-                </p>
-                <p style={{fontSize: '0.85rem', color: '#94a3b8'}}>
-                  Amount: {theme.symbol} {deleteCouponConfirm.amount} | 
-                  Status: {deleteCouponConfirm.isActive ? 'Active' : 'Inactive'}
-                </p>
-                {deleteCouponConfirm.usedCount > 0 && (
-                  <p style={{fontSize: '0.85rem', color: '#f59e0b', marginTop: 8}}>
-                    ⚠️ This coupon has been used {deleteCouponConfirm.usedCount} time(s)
-                  </p>
-                )}
-              </div>
-              <div style={s.modalActions}>
-                <button 
-                  onClick={() => setDeleteCouponConfirm(null)} 
-                  style={s.modalBtn('cancel', hoveredModalBtn.cancel)} 
-                  onMouseEnter={() => setHoveredModalBtn({...hoveredModalBtn, cancel: true})} 
-                  onMouseLeave={() => setHoveredModalBtn({...hoveredModalBtn, cancel: false})}
+              </>
+            )}
+            {(activeTab === 'orders' || activeTab === 'confirmed' || activeTab === 'coupons') && (
+              <>
+                <button
+                  type="button"
+                  className="pa-btn pa-btn--outline pa-btn--admin"
+                  onClick={generateCouponsPDF}
+                  disabled={isGeneratingPDF}
                 >
-                  Cancel
+                  {isGeneratingPDF ? 'Generating PDF…' : 'Export PDF'}
                 </button>
-                <button 
-                  onClick={() => handleDeleteCoupon(deleteCouponConfirm.id)} 
-                  style={{...s.modalBtn('confirm', hoveredModalBtn.confirm), background: hoveredModalBtn.confirm ? '#dc2626' : '#e11d48', borderColor: '#e11d48'}} 
-                  onMouseEnter={() => setHoveredModalBtn({...hoveredModalBtn, confirm: true})} 
-                  onMouseLeave={() => setHoveredModalBtn({...hoveredModalBtn, confirm: false})}
-                >
-                  🗑️ Delete Coupon
+                <button type="button" className="pa-btn pa-btn--outline pa-btn--admin" onClick={loadAllData}>
+                  Reload
                 </button>
-              </div>
-            </div>
-          </div>
-        )}
+              </>
+            )}
 
-        {/* Product Form */}
-        {activeTab === 'products' && showForm && (
-          <div style={s.formSection}>
-            <div style={s.formSectionHeader}>
-              <h3 style={s.formSectionTitle}>{editingProduct ? '✏️ Edit Product' : '✨ Add New Product'}</h3>
-              <button onClick={() => { setShowForm(false); setEditingProduct(null) }} style={s.closeBtn}
-                onMouseEnter={(e) => { e.target.style.background = '#e2e8f0'; e.target.style.color = '#0f172a' }}
-                onMouseLeave={(e) => { e.target.style.background = '#f1f5f9'; e.target.style.color = '#64748b' }}>✕ Close</button>
-            </div>
-            <ProductForm product={editingProduct} onSuccess={handleSuccess} currency="EGP" collectionName={collectionNames.products} />
-          </div>
-        )}
+            {!(activeTab === 'orders' || activeTab === 'confirmed' || activeTab === 'coupons') && (
+              <button type="button" className="pa-btn pa-btn--outline pa-btn--admin" onClick={loadAllData}>
+                Reload
+              </button>
+            )}
+          </>
+        }
+      />
 
-        {/* FIXED: Operations Section - Governorates Management */}
-{activeTab === 'operations' && (
-  <>
-    <div style={s.sectionHeader}>
-      <h2 style={s.sectionTitle}>⚙️ Operations Management</h2>
-      <p style={s.sectionSubtitle}>Configure shipping costs for Egypt's 27 governorates</p>
-    </div>
-
-    {/* Minimum Order Amount Card */}
-    <div style={{
-      background: 'rgba(255,255,255,0.04)',
-      borderWidth: '1px',
-      borderStyle: 'solid',
-      borderColor: 'rgba(255,255,255,0.08)',
-      borderRadius: 14,
-      padding: '20px 24px',
-      marginBottom: 24
-    }}>
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexWrap: isMobile ? 'wrap' : 'nowrap',
-        gap: 16
-      }}>
-        <div>
-          <h3 style={{
-            margin: '0 0 6px 0',
-            fontSize: '1rem',
-            fontWeight: 700,
-            color: '#ffffff',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8
-          }}>
-            💰 Minimum Order Amount
-          </h3>
-          <p style={{
-            margin: 0,
-            fontSize: '0.8rem',
-            color: 'rgba(255,255,255,0.50)'
-          }}>
-            Orders below this amount will not be accepted
-          </p>
-        </div>
-        
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 12,
-          flexShrink: 0
-        }}>
-          <div style={{
-            position: 'relative',
-            display: 'flex',
-            alignItems: 'center'
-          }}>
-            <span style={{
-              position: 'absolute',
-              left: 14,
-              color: theme.color,
-              fontWeight: 700,
-              fontSize: '1rem'
-            }}>
-              {theme.symbol}
-            </span>
+      {(activeTab === 'products' || activeTab === 'orders' || activeTab === 'confirmed' || activeTab === 'coupons') && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center' }}>
+          <div className="pa-field" style={{ flex: '1 1 260px' }}>
             <input
-              type="number"
-              min="0"
-              step="0.01"
-              value={operations.minimumOrderAmount}
-              onChange={(e) => handleUpdateMinOrder(e.target.value)}
-              style={{
-                width: 140,
-                padding: '10px 14px 10px 34px',
-                background: 'rgba(255,255,255,0.06)',
-                borderWidth: '1px',
-                borderStyle: 'solid',
-                borderColor: 'rgba(255,255,255,0.12)',
-                borderRadius: 10,
-                fontSize: '1rem',
-                fontWeight: 700,
-                color: '#ffffff',
-                outline: 'none',
-                transition: 'all 0.2s'
-              }}
-              onFocus={(e) => {
-                e.target.style.borderColor = theme.color
-                e.target.style.boxShadow = `0 0 0 3px ${theme.color}22`
-              }}
-              onBlur={(e) => {
-                e.target.style.borderColor = 'rgba(255,255,255,0.12)'
-                e.target.style.boxShadow = 'none'
-              }}
+              className="pa-input pa-input--admin"
+              type="search"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={
+                activeTab === 'orders'
+                  ? 'Search by Order ID or product name...'
+                  : activeTab === 'confirmed'
+                    ? 'Search confirmed orders...'
+                    : activeTab === 'coupons'
+                      ? 'Search coupons...'
+                      : 'Search products...'
+              }
+              aria-label="Search"
             />
           </div>
         </div>
-      </div>
-    </div>
+      )}
 
-    {/* Governorates Grid */}
-    <div style={{
-      display: 'grid',
-      gridTemplateColumns: isMobile ? '1fr' : isTablet ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)',
-      gap: 12
-    }}>
-      {EGYPT_GOVERNORATES.map((gov) => {
-        const currentCost = operations.governorateCosts[gov.id] ?? gov.defaultCost
-        const isEditing = editingGovernorate === gov.id
-        const isHov = hoveredCard === gov.id
-        
-        return (
-          <div
-            key={gov.id}
-            style={{
-              background: isHov ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.04)',
-              borderWidth: '1px',
-              borderStyle: 'solid',
-              borderColor: isHov ? theme.color + '55' : 'rgba(255,255,255,0.09)',
-              borderRadius: 12,
-              padding: '16px 20px',
-              transition: 'all 0.2s ease',
-              transform: isHov ? 'translateY(-2px)' : 'translateY(0)',
-              boxShadow: isHov ? `0 6px 24px rgba(0,0,0,0.3)` : 'none'
-            }}
-            onMouseEnter={() => setHoveredCard(gov.id)}
-            onMouseLeave={() => setHoveredCard(null)}
-          >
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              marginBottom: 12
-            }}>
-              <div>
-                <h4 style={{
-                  margin: 0,
-                  fontSize: '0.95rem',
-                  fontWeight: 700,
-                  color: '#ffffff'
-                }}>
-                  {gov.name}
-                </h4>
-                <span style={{
-                  fontSize: '0.8rem',
-                  color: 'rgba(255,255,255,0.50)',
-                  fontFamily: 'system-ui'
-                }}>
-                  {gov.nameAr}
-                </span>
-              </div>
-              
-              {!isEditing && (
-                <button
-                  onClick={() => setEditingGovernorate(gov.id)}
-                  style={{
-                    padding: '6px 12px',
-                    borderRadius: 6,
-                    borderWidth: '1px',
-                    borderStyle: 'solid',
-                    borderColor: 'rgba(255,255,255,0.14)',
-                    background: 'rgba(255,255,255,0.06)',
-                    color: 'rgba(255,255,255,0.75)',
-                    fontSize: '0.75rem',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    transition: 'all 0.2s'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.background = 'rgba(255,255,255,0.12)'
-                    e.target.style.color = '#ffffff'
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.background = 'rgba(255,255,255,0.06)'
-                    e.target.style.color = 'rgba(255,255,255,0.75)'
-                  }}
-                >
-                  ✏️ Edit
-                </button>
-              )}
-            </div>
-
-            {isEditing ? (
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault()
-                  const input = e.target.elements.cost
-                  handleUpdateGovernorateCost(gov.id, input.value)
-                }}
-                style={{
-                  display: 'flex',
-                  gap: 8,
-                  alignItems: 'center'
-                }}
+      {/* Date filter â€” confirmed orders only */}
+      {activeTab === 'confirmed' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div className="pa-pdp__label">Date</div>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {dateButtons.map((btn) => (
+              <button
+                key={btn.date}
+                type="button"
+                className={`pa-chip${selectedDate === btn.date ? ' pa-chip--on' : ''}`}
+                aria-pressed={selectedDate === btn.date}
+                onClick={() => setSelectedDate(btn.date)}
               >
-                <div style={{ position: 'relative', flex: 1 }}>
-                  <span style={{
-                    position: 'absolute',
-                    left: 12,
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    color: theme.color,
-                    fontWeight: 700
-                  }}>
-                    {theme.symbol}
-                  </span>
-                  <input
-                    name="cost"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    defaultValue={currentCost}
-                    autoFocus
-                    style={{
-                      width: '100%',
-                      padding: '10px 12px 10px 32px',
-                      background: 'rgba(255,255,255,0.08)',
-                      borderWidth: '1px',
-                      borderStyle: 'solid',
-                      borderColor: theme.color + '50',
-                      borderRadius: 8,
-                      fontSize: '0.95rem',
-                      fontWeight: 700,
-                      color: '#ffffff',
-                      outline: 'none'
-                    }}
-                  />
-                </div>
-                <button
-                  type="submit"
-                  disabled={operationsLoading}
-                  style={{
-                    padding: '10px 16px',
-                    border: 'none',
-                    borderRadius: 8,
-                    background: theme.color,
-                    color: '#ffffff',
-                    fontWeight: 700,
-                    fontSize: '0.85rem',
-                    cursor: operationsLoading ? 'not-allowed' : 'pointer',
-                    opacity: operationsLoading ? 0.6 : 1,
-                    transition: 'all 0.2s'
-                  }}
-                >
-                  {operationsLoading ? '⟳' : '💾'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setEditingGovernorate(null)}
-                  style={{
-                    padding: '10px 12px',
-                    borderWidth: '1px',
-                    borderStyle: 'solid',
-                    borderColor: 'rgba(255,255,255,0.14)',
-                    borderRadius: 8,
-                    background: 'rgba(255,255,255,0.06)',
-                    color: 'rgba(255,255,255,0.65)',
-                    fontWeight: 700,
-                    fontSize: '0.85rem',
-                    cursor: 'pointer'
-                  }}
-                >
-                  ✕
-                </button>
-              </form>
-            ) : (
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8
-              }}>
-                <span style={{
-                  fontSize: '1.3rem',
-                  fontWeight: 800,
-                  color: theme.color
-                }}>
-                  {theme.symbol} {currentCost.toFixed(2)}
-                </span>
-                <span style={{
-                  fontSize: '0.75rem',
-                  color: 'rgba(255,255,255,0.40)',
-                  textTransform: 'uppercase'
-                }}>
-                  Shipping
-                </span>
-              </div>
-            )}
+                {btn.label}
+              </button>
+            ))}
           </div>
-        )
-      })}
-    </div>
-  </>
-)}
+        </div>
+      )}
 
-        {/* Products Section */}
-        {activeTab === 'products' && (
-          <>
-            <div style={s.sectionHeader}>
-              <h2 style={s.sectionTitle}>📦 Products<span style={s.sectionCount}>{filteredProducts.length}</span></h2>
-              {searchQuery && <p style={s.sectionSubtitle}>Search results for "{searchQuery}"</p>}
+      {/* ------------------------------------------------------------------
+          COUPON GENERATION FORM
+      ------------------------------------------------------------------ */}
+      {activeTab === 'coupons' && showCouponForm && (
+        <form className="pa-block" onSubmit={handleGenerateCoupons} style={{ gap: 16 }}>
+          <div className="pa-pdp__label">Generate new coupons</div>
+
+          {couponError && <div className="pa-error" role="alert">{couponError}</div>}
+
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16 }}>
+            <Field
+              id="cg-amount"
+              label="Amount (EGP)"
+              type="number"
+              min="1"
+              step="0.01"
+              value={couponFormData.amount}
+              onChange={(e) => setCouponFormData({ ...couponFormData, amount: e.target.value })}
+              required
+            />
+            <Field
+              id="cg-duration"
+              label="Duration (days)"
+              type="number"
+              min="1"
+              value={couponFormData.duration}
+              onChange={(e) => setCouponFormData({ ...couponFormData, duration: e.target.value })}
+              required
+            />
+            <Field
+              id="cg-quantity"
+              label="Quantity"
+              type="number"
+              min="1"
+              value={couponFormData.quantity}
+              onChange={(e) => setCouponFormData({ ...couponFormData, quantity: e.target.value })}
+              required
+            />
+          </div>
+
+          <div style={{ display: 'flex', gap: 12 }}>
+            <button
+              type="submit"
+              className="pa-btn pa-btn--admin"
+              disabled={isGeneratingCoupons}
+            >
+              {isGeneratingCoupons ? 'Generating...' : 'Generate'}
+            </button>
+            <button
+              type="button"
+              className="pa-btn pa-btn--outline pa-btn--admin"
+              onClick={() => setShowCouponForm(false)}
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      )}
+
+      {/* ------------------------------------------------------------------
+          PRODUCT FORM
+      ------------------------------------------------------------------ */}
+      {activeTab === 'products' && showForm && (
+        <div className="pa-block">
+          <div className="pa-pdp__label">{editingProduct ? 'Edit product' : 'Add new product'}</div>
+          <ProductForm
+            product={editingProduct}
+            onSuccess={handleSuccess}
+            collectionName={collectionNames.products}
+          />
+        </div>
+      )}
+
+      {/* ------------------------------------------------------------------
+          OPERATIONS
+      ------------------------------------------------------------------ */}
+      {activeTab === 'operations' && (
+        <>
+          <div className="pa-block">
+            <div className="pa-pdp__label">Minimum order amount</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'flex-end' }}>
+              <Field
+                id="op-min-order"
+                label="Orders below this amount will not be accepted"
+                type="number"
+                min="0"
+                step="0.01"
+                value={operations.minimumOrderAmount}
+                onChange={(e) => handleUpdateMinOrder(e.target.value)}
+                admin
+              />
             </div>
+          </div>
 
-            {isLoading && !dataLoaded ? (
-              <div style={s.productsGrid}>
-                {[1,2,3,4].map(i => (
-                  <div key={i} style={s.skeletonCard}>
-                    <div className="skeleton" style={s.skeletonImage} />
-                    <div style={s.skeletonContent}>
-                      <div className="skeleton" style={s.skeletonLine('70%')} />
-                      <div className="skeleton" style={s.skeletonLine('40%')} />
-                      <div className="skeleton" style={s.skeletonLine('60%')} />
+          <div className="pa-pdp__label">Governorates</div>
+          <div style={{
+            display: 'grid',
+            gap: 12,
+            gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))'
+          }}>
+            {EGYPT_GOVERNORATES.map((gov) => {
+              const currentCost = operations.governorateCosts[gov.id] ?? gov.defaultCost
+              const isEditing = editingGovernorate === gov.id
+
+              return (
+                <div key={gov.id} className="pa-callout" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+                    <div>
+                      <b>{gov.name}</b>
+                      <div className="pa-subtitle" lang="ar">{gov.nameAr}</div>
                     </div>
+                    {!isEditing && (
+                      <button
+                        type="button"
+                        className="pa-btn pa-btn--outline pa-btn--sm"
+                        onClick={() => setEditingGovernorate(gov.id)}
+                      >
+                        Edit
+                      </button>
+                    )}
                   </div>
-                ))}
-              </div>
-            ) : (
-              <>
-                {filteredProducts.length > 0 ? (
-                  <div style={s.productsGrid}>
-                    {filteredProducts.map(p => (
-                      <div key={p.id} style={s.productCard(hoveredProduct === p.id)} onMouseEnter={() => setHoveredProduct(p.id)} onMouseLeave={() => setHoveredProduct(null)}>
-                        <div style={s.productImageContainer}>
-                          {p.syncedFrom && (
-                            <div style={{ position: 'absolute', top: 12, right: 12, background: themes[p.syncedFrom.toLowerCase()]?.gradient || theme.gradient, color: '#ffffff', padding: '4px 8px', borderRadius: 6, fontSize: '0.75rem', fontWeight: 700, zIndex: 10 }}>
-                              Synced from {p.syncedFrom}
-                            </div>
-                          )}
-                          {p.imageUrl ? <img src={p.imageUrl} alt={p.name} style={s.productImage(hoveredProduct === p.id)} /> : <div style={s.productPlaceholder}>📦</div>}
-                        </div>
-                        <div style={s.productContent}>
-                          <h3 style={s.productName}>{p.name}</h3>
-                          <p style={s.productPrice}>{theme.symbol} {p.price?.toFixed(2)}</p>
-                          <div style={s.productMeta}>
-                            <span>📦 {p.piecesPerBox} pieces per box</span>
-                            {p.flavors?.length > 0 && <span>🎨 {p.flavors.length} flavor{p.flavors.length !== 1 ? 's' : ''}</span>}
-                            {p.stock !== undefined && <span style={{color: p.stock === 0 ? '#e11d48' : p.stock < 10 ? '#f59e0b' : '#059669', fontWeight: 600}}>📊 Stock: {p.stock}</span>}
-                          </div>
-                          <div style={s.productActions}>
-                            <button onClick={() => handleEdit(p)} style={s.productBtn('edit', hoveredButton === `edit-${p.id}`)} onMouseEnter={() => setHoveredButton(`edit-${p.id}`)} onMouseLeave={() => setHoveredButton(null)}>Edit</button>
-                            <button onClick={() => setDeleteConfirm(p)} style={s.productBtn('delete', hoveredButton === `delete-${p.id}`)} onMouseEnter={() => setHoveredButton(`delete-${p.id}`)} onMouseLeave={() => setHoveredButton(null)}>Delete</button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div style={s.emptyState}>
-                    <div style={s.emptyIcon}>📭</div>
-                    <p style={s.emptyText}>{searchQuery ? 'No products match your search' : 'No products found. Create your first product!'}</p>
-                    {!searchQuery && <button onClick={() => setShowForm(true)} style={s.emptyButton(hoveredButton === 'empty')} onMouseEnter={() => setHoveredButton('empty')} onMouseLeave={() => setHoveredButton(null)}><span>➕</span>Add First Product</button>}
-                  </div>
-                )}
-              </>
-            )}
-          </>
-        )}
 
-        {/* Coupons Section */}
-        {activeTab === 'coupons' && (
-          <>
-            <div style={s.sectionHeader}>
-      <h2 style={s.sectionTitle}>
-        🎫 Coupons
-        <span style={s.sectionCount}>{filteredCoupons.length}</span>
-      </h2>
-      <p style={s.sectionSubtitle}>
-        Manage discount coupons for EGP store • 
-        <span style={{ color: theme.color, fontWeight: 600 }}>
-          {' '}{coupons.filter(c => c.isActive && !isCouponExpired(c) && (c.usedCount || 0) === 0).length} ready to print
-        </span>
-      </p>
-    </div>
-
-            {filteredCoupons.length > 0 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {filteredCoupons.map(coupon => {
-                  const expired = isCouponExpired(coupon)
-                  const isHov = hoveredCard === coupon.id
-                  return (
-                    <div
-                      key={coupon.id}
-                      style={{
-                        background: isHov ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.04)',
-                        border: `1px solid ${isHov ? theme.color + '55' : 'rgba(255,255,255,0.09)'}`,
-                        borderLeft: `3px solid ${expired ? '#f59e0b' : !coupon.isActive ? '#ef4444' : theme.color}`,
-                        borderRadius: 12,
-                        padding: isMobile ? '14px 16px' : '16px 20px',
-                        display: 'flex',
-                        flexDirection: isMobile ? 'column' : 'row',
-                        alignItems: isMobile ? 'stretch' : 'center',
-                        gap: 16,
-                        transition: 'all 0.2s ease',
-                        opacity: (!coupon.isActive || expired) ? 0.65 : 1,
-                        transform: isHov ? 'translateY(-2px)' : 'translateY(0)',
-                        boxShadow: isHov ? `0 6px 24px rgba(0,0,0,0.3)` : 'none'
+                  {isEditing ? (
+                    <form
+                      style={{ display: 'flex', gap: 8, alignItems: 'center' }}
+                      onSubmit={(e) => {
+                        e.preventDefault()
+                        handleUpdateGovernorateCost(gov.id, e.target.elements.cost.value)
                       }}
-                      onMouseEnter={() => setHoveredCard(coupon.id)}
-                      onMouseLeave={() => setHoveredCard(null)}
                     >
-                      {/* Coupon Code + Meta */}
-                      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                        
-                        {/* Code + Status badges */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                          <span style={{
-                            fontFamily: "'JetBrains Mono', monospace",
-                            fontSize: isMobile ? '0.95rem' : '1.05rem',
-                            fontWeight: 700,
-                            color: '#ffffff',
-                            letterSpacing: '1.5px',
-                            background: 'rgba(255,255,255,0.08)',
-                            border: '1px solid rgba(255,255,255,0.12)',
-                            padding: '5px 12px',
-                            borderRadius: 7
-                          }}>
-                            {coupon.code}
-                          </span>
-
-                          {coupon.isActive && !expired && (
-                            <span style={{
-                              background: 'rgba(16,185,129,0.15)',
-                              color: '#34d399',
-                              border: '1px solid rgba(16,185,129,0.25)',
-                              padding: '2px 9px', borderRadius: 20,
-                              fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px'
-                            }}>● Active</span>
-                          )}
-                          {!coupon.isActive && (
-                            <span style={{
-                              background: 'rgba(239,68,68,0.15)',
-                              color: '#f87171',
-                              border: '1px solid rgba(239,68,68,0.25)',
-                              padding: '2px 9px', borderRadius: 20,
-                              fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px'
-                            }}>● Inactive</span>
-                          )}
-                          {expired && (
-                            <span style={{
-                              background: 'rgba(245,158,11,0.15)',
-                              color: '#fbbf24',
-                              border: '1px solid rgba(245,158,11,0.25)',
-                              padding: '2px 9px', borderRadius: 20,
-                              fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px'
-                            }}>● Expired</span>
-                          )}
-                        </div>
-
-                        {/* Meta row */}
-                        <div style={{
-                          display: 'flex', gap: 14, flexWrap: 'wrap',
-                          fontSize: '0.76rem', color: 'rgba(255,255,255,0.50)'
-                        }}>
-                          <span>📅 Created: {coupon.createdAt?.toLocaleDateString('en-GB')}</span>
-                          <span>⏳ Expires: {coupon.expiresAt?.toLocaleDateString('en-GB')}</span>
-                          <span>🔁 Used: {coupon.usedCount || 0}×</span>
-                        </div>
+                      <div className="pa-field" style={{ flex: 1 }}>
+                        <label className="pa-label" htmlFor={`gov-cost-${gov.id}`}>Shipping cost</label>
+                        <input
+                          id={`gov-cost-${gov.id}`}
+                          name="cost"
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          defaultValue={currentCost}
+                          className="pa-input pa-input--admin"
+                          autoFocus
+                        />
                       </div>
-
-                      {/* Amount */}
-                      <div style={{
-                        textAlign: isMobile ? 'left' : 'center',
-                        minWidth: 110,
-                        padding: isMobile ? '8px 0 0' : '0',
-                        borderTop: isMobile ? '1px solid rgba(255,255,255,0.07)' : 'none'
-                      }}>
-                        <div style={{
-                          fontSize: isMobile ? '1.4rem' : '1.6rem',
-                          fontWeight: 800,
-                          color: theme.color,
-                          letterSpacing: '-0.5px'
-                        }}>
-                          {theme.symbol} {coupon.amount?.toFixed(2)}
-                        </div>
-                        <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.40)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                          Discount
-                        </div>
-                      </div>
-
-                      {/* Actions */}
-                      <div style={{ display: 'flex', gap: 8, flexShrink: 0, flexWrap: 'wrap' }}>
-                        {/* Toggle */}
-                        <button
-                          onClick={() => handleToggleCouponStatus(coupon)}
-                          style={{
-                            padding: '7px 13px',
-                            borderRadius: 8,
-                            border: `1px solid ${coupon.isActive ? 'rgba(255,255,255,0.14)' : theme.color + '55'}`,
-                            background: coupon.isActive ? 'rgba(255,255,255,0.06)' : `${theme.color}18`,
-                            color: coupon.isActive ? 'rgba(255,255,255,0.65)' : theme.color,
-                            fontSize: '0.80rem', fontWeight: 700,
-                            cursor: 'pointer', transition: 'all 0.2s', whiteSpace: 'nowrap'
-                          }}
-                          onMouseEnter={(e) => { e.target.style.transform = 'translateY(-1px)' }}
-                          onMouseLeave={(e) => { e.target.style.transform = 'translateY(0)' }}
-                        >
-                          {coupon.isActive ? '⏸ Deactivate' : '▶ Activate'}
-                        </button>
-
-                        {/* Edit */}
-                        <button
-                          onClick={() => setEditingCoupon(coupon)}
-                          style={{
-                            padding: '7px 13px',
-                            borderRadius: 8,
-                            border: '1px solid rgba(255,255,255,0.14)',
-                            background: 'rgba(255,255,255,0.06)',
-                            color: 'rgba(255,255,255,0.75)',
-                            fontSize: '0.80rem', fontWeight: 700,
-                            cursor: 'pointer', transition: 'all 0.2s'
-                          }}
-                          onMouseEnter={(e) => {
-                            e.target.style.background = 'rgba(255,255,255,0.12)'
-                            e.target.style.color = '#ffffff'
-                            e.target.style.transform = 'translateY(-1px)'
-                          }}
-                          onMouseLeave={(e) => {
-                            e.target.style.background = 'rgba(255,255,255,0.06)'
-                            e.target.style.color = 'rgba(255,255,255,0.75)'
-                            e.target.style.transform = 'translateY(0)'
-                          }}
-                        >
-                          ✏️ Edit
-                        </button>
-
-                        {/* Delete */}
-                        <button
-                          onClick={() => setDeleteCouponConfirm(coupon)}
-                          style={{
-                            padding: '7px 13px',
-                            borderRadius: 8,
-                            border: '1px solid rgba(239,68,68,0.25)',
-                            background: 'rgba(239,68,68,0.10)',
-                            color: '#f87171',
-                            fontSize: '0.80rem', fontWeight: 700,
-                            cursor: 'pointer', transition: 'all 0.2s'
-                          }}
-                          onMouseEnter={(e) => {
-                            e.target.style.background = '#ef4444'
-                            e.target.style.borderColor = '#ef4444'
-                            e.target.style.color = '#ffffff'
-                            e.target.style.transform = 'translateY(-1px)'
-                          }}
-                          onMouseLeave={(e) => {
-                            e.target.style.background = 'rgba(239,68,68,0.10)'
-                            e.target.style.borderColor = 'rgba(239,68,68,0.25)'
-                            e.target.style.color = '#f87171'
-                            e.target.style.transform = 'translateY(0)'
-                          }}
-                        >
-                          🗑️
-                        </button>
-                      </div>
+                      <button type="submit" className="pa-btn pa-btn--admin" disabled={operationsLoading}>
+                        Save
+                      </button>
+                      <button
+                        type="button"
+                        className="pa-btn pa-btn--outline pa-btn--admin"
+                        onClick={() => setEditingGovernorate(null)}
+                      >
+                        Cancel
+                      </button>
+                    </form>
+                  ) : (
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                      <b>{theme.symbol} {currentCost.toFixed(2)}</b>
+                      <span className="pa-subtitle">Shipping</span>
                     </div>
-                  )
-                })}
-              </div>
-            ) : (
-              <div style={s.emptyState}>
-                <div style={s.emptyIcon}>🎫</div>
-                <p style={s.emptyText}>
-                  {couponSearchQuery ? 'No coupons match your search' : 'No coupons generated yet'}
-                </p>
-                {!couponSearchQuery && (
-                  <button
-                    onClick={() => setShowCouponForm(true)}
-                    style={s.emptyButton(hoveredButton === 'empty-coupon')}
-                    onMouseEnter={() => setHoveredButton('empty-coupon')}
-                    onMouseLeave={() => setHoveredButton(null)}
-                  >
-                    <span>🎫</span>Generate First Coupon
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </>
+      )}
+
+      {/* ------------------------------------------------------------------
+          PRODUCTS
+      ------------------------------------------------------------------ */}
+      {activeTab === 'products' && (
+        <div className="pa-tablebox">
+          <div className="pa-pdp__label">
+            Products <span className="pa-count">{filteredProducts.length}</span>
+          </div>
+          {searchQuery && <div className="pa-subtitle">Search results for "{searchQuery}"</div>}
+
+          {filteredProducts.length === 0 ? (
+            <div className="pa-callout" style={{ marginTop: 12 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <b>{searchQuery ? 'No products match your search' : 'No products found.'}</b>
+                {!searchQuery && (
+                  <button type="button" className="pa-btn pa-btn--admin" onClick={() => setShowForm(true)}>
+                    Add first product
                   </button>
                 )}
               </div>
-            )}
-          </>
-        )}
-
-        {/* Orders Section - EGP specific with customer details */}
-        {activeTab === 'orders' && (
-          <>
-            <div style={s.sectionHeader}>
-              <h2 style={s.sectionTitle}>🛒 Pending EGP Orders<span style={s.sectionCount}>{filteredOrders.length}</span></h2>
-              <p style={s.sectionSubtitle}>Cash on delivery orders awaiting confirmation for shipping</p>
             </div>
+          ) : (
+            <table className="pa-table">
+              <thead>
+                <tr className="pa-tr pa-tr--head">
+                  <th>Image</th>
+                  <th>Product</th>
+                  <th>Price</th>
+                  <th>Stock</th>
+                  <th>Colours</th>
+                  <th>Updated</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredProducts.map((p) => (
+                  <tr key={p.id} className="pa-tr">
+                    <td>
+                      <div className="pa-thumb">
+                        {p.images?.[0]?.url && (
+                          <img src={thumb(p.images[0].url, 120)} alt="" width={52} height={64} style={{ objectFit: 'cover' }} />
+                        )}
+                      </div>
+                    </td>
+                    <td>{loc(p.title, 'en')}</td>
+                    <td><bdi>{formatEGP(p.price, 'en')}</bdi></td>
+                    <td>{Number(p.totalStock ?? 0)}</td>
+                    <td>{(p.availableColors ?? []).length}</td>
+                    <td>{formatDate(p.updatedAt ?? p.createdAt)}</td>
+                    <td style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                      <button type="button" className="pa-btn pa-btn--outline pa-btn--sm" onClick={() => handleEdit(p)}>Edit</button>
+                      <button type="button" className="pa-btn pa-btn--outline pa-btn--sm" onClick={() => setDeleteConfirm(p)}>Delete</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
 
-            {filteredOrders.length > 0 ? (
-              <div style={s.ordersContainer}>
-                <table style={s.ordersTable}>
+      {/* ------------------------------------------------------------------
+          COUPONS LIST
+      ------------------------------------------------------------------ */}
+      {activeTab === 'coupons' && !showCouponForm && (
+        <div className="pa-tablebox">
+          <div className="pa-pdp__label">
+            Coupons <span className="pa-count">{filteredCoupons.length}</span>
+          </div>
+          {searchQuery && <div className="pa-subtitle">Search results for "{searchQuery}"</div>}
+
+          {filteredCoupons.length === 0 ? (
+            <div className="pa-callout" style={{ marginTop: 12 }}>
+              <b>No coupons found. Generate your first batch.</b>
+            </div>
+          ) : (
+            <table className="pa-table">
+              <thead>
+                <tr className="pa-tr pa-tr--head">
+                  <th>Code</th>
+                  <th>Status</th>
+                  <th>Amount</th>
+                  <th>Expires</th>
+                  <th>Used</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredCoupons.map((coupon) => {
+                  const expired = isCouponExpired(coupon)
+                  return (
+                    <tr key={coupon.id} className="pa-tr">
+                      <td style={{ direction: 'ltr', unicodeBidi: 'embed', fontWeight: 700 }}>{coupon.code}</td>
+                      <td>
+                        <StatusPill
+                          status={coupon.isActive && !expired ? 'delivered' : 'cancelled'}
+                          label={coupon.isActive && !expired ? 'Active' : expired ? 'Expired' : 'Revoked'}
+                        />
+                      </td>
+                      <td><bdi>{formatEGP(coupon.amount, 'en')}</bdi></td>
+                      <td>{expired ? 'â€”' : formatDate(coupon.expiresAt)}</td>
+                      <td>{coupon.usedCount || 0}</td>
+                      <td style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                        <button
+                          type="button"
+                          className="pa-btn pa-btn--outline pa-btn--sm"
+                          onClick={() => handleToggleCouponStatus(coupon)}
+                        >
+                          {coupon.isActive ? 'Revoke' : 'Activate'}
+                        </button>
+                        <button
+                          type="button"
+                          className="pa-btn pa-btn--outline pa-btn--sm"
+                          onClick={() => setEditingCoupon(coupon)}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          className="pa-btn pa-btn--outline pa-btn--sm"
+                          onClick={() => setDeleteCouponConfirm(coupon)}
+                        >
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
+
+      {/* ------------------------------------------------------------------
+          ORDERS
+      ------------------------------------------------------------------ */}
+      {activeTab === 'orders' && (
+        <div className="pa-tablebox">
+          <div className="pa-pdp__label">
+            Pending EGP orders <span className="pa-count">{filteredOrders.length}</span>
+          </div>
+          {filteredOrders.length === 0 ? (
+            <div className="pa-callout" style={{ marginTop: 12 }}>
+              <b>No pending EGP orders.</b>
+            </div>
+          ) : (
+            <table className="pa-table">
+              <thead>
+                <tr className="pa-tr pa-tr--head">
+                  <th>Order details</th>
+                  <th>Customer</th>
+                  <th>Items</th>
+                  <th>Total</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredOrders.map((order) => (
+                  <tr key={order.id} className="pa-tr">
+                    <td>
+                      <div style={{ direction: 'ltr', unicodeBidi: 'embed', fontWeight: 700 }}>{order.orderId}</div>
+                      <div className="pa-subtitle">{formatDate(order.createdAt)}</div>
+                    </td>
+                    <td>
+                      <div>{order.customerName}</div>
+                      <div className="pa-subtitle" style={{ direction: 'ltr', unicodeBidi: 'embed' }}>{order.customerPhone}</div>
+                      <div className="pa-subtitle">{order.customerAddress}</div>
+                      {order.governorate && <div className="pa-subtitle">{order.governorate}</div>}
+                    </td>
+                    <td>{order.totalItems}</td>
+                    <td><bdi>{formatEGP(order.totalPrice, 'en')}</bdi></td>
+                    <td><StatusPill status="pending" /></td>
+                    <td>
+                      <button
+                        type="button"
+                        className="pa-btn pa-btn--admin"
+                        onClick={() => setConfirmPaymentModal(order)}
+                      >
+                        Confirm for shipping
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
+
+      {/* ------------------------------------------------------------------
+          CONFIRMED
+      ------------------------------------------------------------------ */}
+      {activeTab === 'confirmed' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div className="pa-pdp__label">
+            Confirmed for shipping <span className="pa-count">{filteredConfirmedPayments.length}</span>
+          </div>
+
+          {filteredConfirmedPayments.length === 0 ? (
+            <div className="pa-callout">
+              <b>No confirmed EGP orders for {new Date(selectedDate).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</b>
+            </div>
+          ) : (
+            filteredConfirmedPayments.map((payment) => (
+              <div key={payment.id} className="pa-block">
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'space-between', alignItems: 'baseline' }}>
+                  <div>
+                    <b style={{ direction: 'ltr', unicodeBidi: 'embed' }}>{payment.orderId}</b>
+                    <div className="pa-subtitle">{formatDate(payment.confirmedAt)}</div>
+                  </div>
+                  <StatusPill
+                    status={payment.shippingStatus === 'shipped' ? 'delivered' : 'pending'}
+                    label={payment.shippingStatus === 'shipped' ? 'Shipped' : 'Pending'}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 20, marginTop: 8 }}>
+                  <div className="pa-field">
+                    <div className="pa-pdp__label">Customer</div>
+                    <div>{payment.customerName}</div>
+                    <div className="pa-subtitle" style={{ direction: 'ltr', unicodeBidi: 'embed' }}>{payment.customerPhone}</div>
+                    <div className="pa-subtitle">{payment.customerAddress}</div>
+                  </div>
+                </div>
+                {/* No shipping toggle: the original view was display-only for
+                    `shippingStatus`; the write path never existed. */}
+
+                <div className="pa-pdp__label" style={{ marginTop: 12 }}>Order items</div>
+                <table className="pa-table">
                   <thead>
-                    <tr>
-                      <th style={s.tableHeader}>Order Details</th>
-                      <th style={s.tableHeader}>Customer</th>
-                      <th style={s.tableHeader}>Items</th>
-                      <th style={s.tableHeader}>Total</th>
-                      <th style={s.tableHeader}>Date</th>
-                      <th style={s.tableHeader}>Action</th>
+                    <tr className="pa-tr pa-tr--head">
+                      <th>Item</th>
+                      <th>Qty</th>
+                      <th>Line total</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredOrders.map(order => (
-                      <tr key={order.id}>
-                        <td style={s.tableCell}>
-                          <div style={{display: 'flex', flexDirection: 'column', gap: 6}}>
-                            <span style={s.orderId}>{order.orderId}</span>
-                            <span style={s.statusBadge(order.status)}>⏳ Pending</span>
-                          </div>
-                        </td>
-                        
-                        <td style={s.tableCell}>
-                          <div style={{display: 'flex', flexDirection: 'column', gap: 4}}>
-                            <span style={{fontWeight: 600, color: '#0f172a'}}>{order.customerName}</span>
-                            <span style={{fontSize: '0.85rem', color: '#64748b'}}>📞 {order.customerPhone}</span>
-                            {order.customerAddress && (
-                              <span style={{fontSize: '0.8rem', color: '#94a3b8', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis'}}>
-                                📍 {order.customerAddress}
-                              </span>
-                            )}
-                            {order.customerLocation && (
-                              <a 
-                                href={`https://www.google.com/maps?q=${order.customerLocation.latitude},${order.customerLocation.longitude}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                style={{fontSize: '0.75rem', color: theme.color, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4}}
-                              >
-                                🗺️ View Map
-                              </a>
-                            )}
-                          </div>
-                        </td>
-
-                        <td style={{...s.tableCell, ...s.orderItems}}>
-                          {order.items?.map((item, idx) => (
-                            <div key={idx} style={s.orderItem}>
-                              <div style={s.itemPlaceholder}>📦</div>
-                              <div style={s.itemDetails}>
-                                <span style={s.itemName}>{item.name}</span>
-                                <span style={s.itemMeta}>{item.quantity} × {theme.symbol} {item.price?.toFixed(2)}</span>
-                              </div>
-                            </div>
-                          ))}
-                        </td>
-                        
-                        <td style={s.tableCell}>
-                          <span style={s.orderTotal}>{theme.symbol} {order.totalPrice?.toFixed(2)}</span>
-                          <span style={s.currencyBadge}>{order.currency}</span>
-                        </td>
-                        
-                        <td style={s.tableCell}>{formatDate(order.createdAt)}</td>
-                        
-                        <td style={s.tableCell}>
-                          <button onClick={() => setConfirmPaymentModal(order)} style={s.confirmBtn(hoveredButton === `confirm-${order.id}`)} onMouseEnter={() => setHoveredButton(`confirm-${order.id}`)} onMouseLeave={() => setHoveredButton(null)}>✓ Confirm</button>
-                        </td>
+                    {(payment.items ?? []).map((item, idx) => (
+                      <tr key={idx} className="pa-tr">
+                        <td>{item.name}</td>
+                        <td>{item.quantity}</td>
+                        <td><bdi>{formatEGP((item.price ?? 0) * (item.quantity ?? 1), 'en')}</bdi></td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
-              </div>
-            ) : (
-              <div style={s.emptyState}>
-                <div style={s.emptyIcon}>📭</div>
-                <p style={s.emptyText}>{searchQuery ? 'No orders match your search' : 'No pending EGP orders'}</p>
-              </div>
-            )}
-          </>
-        )}
 
-        {/* Confirmed Payments Section - EGP specific with customer details */}
-        {activeTab === 'confirmed' && (
-          <>
-            <div style={s.sectionHeader}>
-              <h2 style={s.sectionTitle}>✅ Confirmed EGP Orders<span style={s.sectionCount}>{filteredConfirmedPayments.length}</span></h2>
-              <p style={s.sectionSubtitle}>Cash on delivery orders confirmed and ready for shipping</p>
+                <Summary
+                  rows={[
+                    { label: 'Total amount', value: formatEGP(payment.totalPrice, 'en'), tone: 'total' }
+                  ]}
+                />
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
+      {/* ------------------------------------------------------------------
+          MODALS
+      ------------------------------------------------------------------ */}
+      {editingCoupon && (
+        <div className="pa-sheet-backdrop" onClick={() => setEditingCoupon(null)}>
+          <form
+            className="pa-sheet"
+            onClick={(e) => e.stopPropagation()}
+            onSubmit={handleEditCoupon}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Edit coupon"
+          >
+            <div className="pa-sheet__title">Edit coupon</div>
+            <div className="pa-subtitle">Update coupon details</div>
+            <div className="pa-field">
+              <span className="pa-label">Code</span>
+              <b style={{ direction: 'ltr', unicodeBidi: 'embed' }}>{editingCoupon.code}</b>
+            </div>
+            <Field
+              id="ec-amount"
+              label="Amount (EGP)"
+              type="number"
+              min="1"
+              step="0.01"
+              value={editingCoupon.amount}
+              onChange={(e) => setEditingCoupon({ ...editingCoupon, amount: e.target.value })}
+              required
+            />
+            <Field
+              id="ec-duration"
+              label="Duration (days)"
+              type="number"
+              min="1"
+              value={editingCoupon.duration}
+              onChange={(e) => setEditingCoupon({ ...editingCoupon, duration: e.target.value })}
+              required
+            />
+            {couponError && <div className="pa-error" role="alert">{couponError}</div>}
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button type="submit" className="pa-btn pa-btn--admin">Save</button>
+              <button
+                type="button"
+                className="pa-btn pa-btn--outline pa-btn--admin"
+                onClick={() => setEditingCoupon(null)}
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {deleteCouponConfirm && (
+        <div className="pa-sheet-backdrop" onClick={() => setDeleteCouponConfirm(null)}>
+          <div
+            className="pa-sheet"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Delete coupon"
+          >
+            <div className="pa-sheet__title">Delete coupon</div>
+            <div className="pa-subtitle">
+              You are about to delete <b style={{ direction: 'ltr', unicodeBidi: 'embed' }}>{deleteCouponConfirm.code}</b>. This action cannot be undone.
+            </div>
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button
+                type="button"
+                className="pa-btn pa-btn--admin"
+                onClick={() => {
+                  handleDeleteCoupon(deleteCouponConfirm.id)
+                  setDeleteCouponConfirm(null)
+                }}
+              >
+                Delete coupon
+              </button>
+              <button
+                type="button"
+                className="pa-btn pa-btn--outline pa-btn--admin"
+                onClick={() => setDeleteCouponConfirm(null)}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deleteConfirm && (
+        <div className="pa-sheet-backdrop" onClick={() => setDeleteConfirm(null)}>
+          <div
+            className="pa-sheet"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Delete product"
+          >
+            <div className="pa-sheet__title">Delete product</div>
+            <div className="pa-subtitle">Are you sure you want to delete this product? This action cannot be undone.</div>
+            <div className="pa-subtitle">You are about to delete: {deleteConfirm.name}</div>
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button
+                type="button"
+                className="pa-btn pa-btn--admin"
+                onClick={() => {
+                  handleDelete(deleteConfirm.id)
+                  setDeleteConfirm(null)
+                }}
+              >
+                Delete product
+              </button>
+              <button
+                type="button"
+                className="pa-btn pa-btn--outline pa-btn--admin"
+                onClick={() => setDeleteConfirm(null)}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {confirmPaymentModal && (
+        <div className="pa-sheet-backdrop" onClick={() => setConfirmPaymentModal(null)}>
+          <div
+            className="pa-sheet"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Confirm EGP order for shipping"
+          >
+            <div className="pa-sheet__title">Confirm EGP order for shipping</div>
+            <div className="pa-subtitle">Review the cash on delivery order before confirming for shipping</div>
+
+            <div className="pa-field">
+              <div className="pa-pdp__label">Order information</div>
+              <div style={{ direction: 'ltr', unicodeBidi: 'embed' }}>{confirmPaymentModal.orderId}</div>
+              <div className="pa-subtitle">{formatDate(confirmPaymentModal.createdAt)}</div>
+              <StatusPill status="pending" label={confirmPaymentModal.status} />
             </div>
 
-            {filteredConfirmedPayments.length > 0 ? (
-              <div style={s.confirmedGrid}>
-                {filteredConfirmedPayments.map(payment => (
-                  <div key={payment.id} style={s.confirmedCard(hoveredCard === payment.id)} onMouseEnter={() => setHoveredCard(payment.id)} onMouseLeave={() => setHoveredCard(null)}>
-                    <div style={s.confirmedHeader}>
-                      <div style={s.confirmedIds}>
-                        <div style={s.confirmedOrderId}>{payment.orderId}</div>
-                      </div>
-                      <span style={s.confirmedDate}>✓ {formatDate(payment.confirmedAt)}</span>
-                    </div>
+            <div className="pa-field">
+              <div className="pa-pdp__label">Delivery</div>
+              <div>{confirmPaymentModal.customerName}</div>
+              <div className="pa-subtitle" style={{ direction: 'ltr', unicodeBidi: 'embed' }}>{confirmPaymentModal.customerPhone}</div>
+              <div className="pa-subtitle">{confirmPaymentModal.customerAddress}</div>
+            </div>
 
-                    {/* Customer Info for EGP */}
-                    <div style={{
-                      background: 'rgba(255,255,255,0.04)',
-                      border: '1px solid rgba(255,255,255,0.08)',
-                      borderRadius: 12,
-                      overflow: 'hidden',
-                      marginBottom: 16
-                    }}>
-                      {/* Header row */}
-                      <div style={{
-                        padding: '8px 14px',
-                        background: 'rgba(255,255,255,0.04)',
-                        borderBottom: '1px solid rgba(255,255,255,0.07)',
-                        fontSize: '0.68rem',
-                        fontWeight: 700,
-                        color: 'rgba(255,255,255,0.40)',
-                        textTransform: 'uppercase',
-                        letterSpacing: '1px'
-                      }}>
-                        Customer Details
-                      </div>
-
-                      <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-
-                        {/* Name */}
-                        <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'nowrap' }}>
-                          <div style={{
-                            width: 28, height: 28, borderRadius: 7, flexShrink: 0,
-                            background: `${theme.color}18`,
-                            border: `1px solid ${theme.color}30`,
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            fontSize: '0.8rem'
-                          }}>👤</div>
-                          <span style={{
-                            fontWeight: 700, fontSize: '0.88rem', color: '#ffffff',
-                            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
-                          }}>
-                            {payment.customerInfo?.customerName || payment.customerName}
-                          </span>
-                        </div>
-
-                        {/* Phone */}
-                        <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'nowrap' }}>
-                          <div style={{
-                            width: 28, height: 28, borderRadius: 7, flexShrink: 0,
-                            background: 'rgba(16,185,129,0.12)',
-                            border: '1px solid rgba(16,185,129,0.22)',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            fontSize: '0.8rem'
-                          }}>📞</div>
-                          <span style={{
-                            fontSize: '0.82rem', color: 'rgba(255,255,255,0.80)',
-                            fontFamily: "'JetBrains Mono', monospace",
-                            letterSpacing: '0.3px', whiteSpace: 'nowrap'
-                          }}>
-                            {payment.customerInfo?.customerPhone || payment.customerPhone}
-                          </span>
-                        </div>
-
-                        {/* Address */}
-                        {(payment.customerInfo?.customerAddress || payment.customerAddress) && (
-                          <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'flex-start', gap: 10, flexWrap: 'nowrap' }}>
-                            <div style={{
-                              width: 28, height: 28, borderRadius: 7, flexShrink: 0,
-                              background: 'rgba(245,158,11,0.12)',
-                              border: '1px solid rgba(245,158,11,0.22)',
-                              display: 'flex', alignItems: 'center', justifyContent: 'center',
-                              fontSize: '0.8rem', marginTop: 2
-                            }}>📍</div>
-                            <span style={{
-                              fontSize: '0.82rem', color: 'rgba(255,255,255,0.75)',
-                              lineHeight: 1.5, flex: 1
-                            }}>
-                              {payment.customerInfo?.customerAddress || payment.customerAddress}
-                            </span>
-                          </div>
-                        )}
-
-                        {(payment.customerInfo?.customerLocation || payment.customerLocation) && (
-                          <a
-                            href={`https://www.google.com/maps?q=${(payment.customerInfo?.customerLocation || payment.customerLocation).latitude},${(payment.customerInfo?.customerLocation || payment.customerLocation).longitude}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            style={{
-                              display: 'inline-flex', flexDirection: 'row', alignItems: 'center',
-                              gap: 6, padding: '6px 12px',
-                              background: `${theme.color}15`,
-                              border: `1px solid ${theme.color}30`,
-                              borderRadius: 8, fontSize: '0.78rem', fontWeight: 700,
-                              color: theme.color, textDecoration: 'none',
-                              alignSelf: 'flex-start', whiteSpace: 'nowrap'
-                            }}
-                          >
-                            🗺️ Open in Google Maps
-                          </a>
-                        )}
-
-                      </div>
-                    </div>
-
-                    <div style={s.confirmedSection}>
-                      <div style={s.confirmedLabel}>Order Items</div>
-                      <div style={s.confirmedItemsList}>
-                        {payment.items?.map((item, idx) => (
-                          <div key={idx} style={{...s.confirmedItem, borderBottom: idx === payment.items.length - 1 ? 'none' : '1px solid #e2e8f0'}}>
-                            <div style={s.confirmedItemInfo}>
-                              <div style={{fontSize: '1.5rem'}}>📦</div>
-                              <div>
-                                <div style={s.confirmedItemName}>{item.name}</div>
-                                <div style={s.confirmedItemQty}>Qty: {item.quantity}</div>
-                              </div>
-                            </div>
-                            <div style={s.confirmedItemPrice}>{theme.symbol} {(item.price * item.quantity).toFixed(2)}</div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div style={s.confirmedTotal}>
-                      <span style={s.confirmedTotalLabel}>Total Amount</span>
-                      <span style={s.confirmedTotalAmount}>{theme.symbol} {payment.totalPrice?.toFixed(2)}</span>
-                    </div>
-
-                    <div style={s.confirmedMeta}>
-                      <div style={s.confirmedMetaItem}>📅 Confirmed: {formatDate(payment.confirmedAt)}</div>
-                      <div style={s.confirmedMetaItem}>👤 By: {payment.confirmedByEmail}</div>
-                      <div style={{...s.confirmedMetaItem, marginTop: 8}}>
-                        <span style={s.shippingStatus(payment.shippingStatus)}>🚚 {payment.shippingStatus === 'shipped' ? 'Shipped' : 'Pending'}</span>
-                      </div>
-                    </div>
-                  </div>
+            <div className="pa-pdp__label">Order items ({confirmPaymentModal.totalItems})</div>
+            <table className="pa-table">
+              <thead>
+                <tr className="pa-tr pa-tr--head">
+                  <th>Item</th>
+                  <th>Qty</th>
+                  <th>Line total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(confirmPaymentModal.items ?? []).map((item, idx) => (
+                  <tr key={idx} className="pa-tr">
+                    <td>{item.name}</td>
+                    <td>{item.quantity}</td>
+                    <td><bdi>{formatEGP((item.price ?? 0) * (item.quantity ?? 1), 'en')}</bdi></td>
+                  </tr>
                 ))}
-              </div>
-            ) : (
-              <div style={s.emptyState}>
-                <div style={s.emptyIcon}>📭</div>
-                <p style={s.emptyText}>No confirmed EGP orders for {new Date(selectedDate).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</p>
-                <p style={{fontSize: '0.9rem', color: '#94a3b8', marginTop: 8}}>Try selecting a different date from the filter above</p>
-              </div>
-            )}
-          </>
-        )}
+              </tbody>
+            </table>
 
-        {/* Delete Confirmation Modal */}
-        {deleteConfirm && (
-          <div style={s.modalOverlay} onClick={() => setDeleteConfirm(null)}>
-            <div style={s.modal} onClick={(e) => e.stopPropagation()}>
-              <div style={s.modalHeader}>
-                <h3 style={s.modalTitle}>🗑️ Delete Product</h3>
-                <p style={s.modalSubtitle}>Are you sure you want to delete this product? This action cannot be undone.</p>
-              </div>
-              <div style={s.modalSection}>
-                <p style={s.deleteModalText}>You are about to delete:<span style={s.deleteModalProductName}>📦 {deleteConfirm.name}</span></p>
-                <p style={{fontSize: '0.85rem', color: '#94a3b8'}}>Price: {theme.symbol} {deleteConfirm.price?.toFixed(2)} | ID: {deleteConfirm.id}</p>
-              </div>
-              <div style={s.modalActions}>
-                <button onClick={() => setDeleteConfirm(null)} style={s.modalBtn('cancel', hoveredModalBtn.cancel)} onMouseEnter={() => setHoveredModalBtn({...hoveredModalBtn, cancel: true})} onMouseLeave={() => setHoveredModalBtn({...hoveredModalBtn, cancel: false})}>Cancel</button>
-                <button onClick={() => handleDelete(deleteConfirm.id)} style={{...s.modalBtn('confirm', hoveredModalBtn.confirm), background: hoveredModalBtn.confirm ? '#dc2626' : '#e11d48', borderColor: '#e11d48'}} onMouseEnter={() => setHoveredModalBtn({...hoveredModalBtn, confirm: true})} onMouseLeave={() => setHoveredModalBtn({...hoveredModalBtn, confirm: false})}>🗑️ Delete Product</button>
-              </div>
+            <Summary
+              rows={[
+                { label: 'Total items', value: String(confirmPaymentModal.totalItems ?? 0) },
+                { label: 'Currency', value: confirmPaymentModal.currency },
+                { label: 'Total amount', value: formatEGP(confirmPaymentModal.totalPrice, 'en'), tone: 'total' }
+              ]}
+            />
+
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button
+                type="button"
+                className="pa-btn pa-btn--admin"
+                onClick={() => {
+                  onConfirmPayment(confirmPaymentModal)
+                  setConfirmPaymentModal(null)
+                }}
+              >
+                Confirm for shipping
+              </button>
+              <button
+                type="button"
+                className="pa-btn pa-btn--outline pa-btn--admin"
+                onClick={() => setConfirmPaymentModal(null)}
+              >
+                Cancel
+              </button>
             </div>
           </div>
-        )}
-
-        {/* Confirm Payment Modal - EGP specific with customer details */}
-        {confirmPaymentModal && (
-          <div style={s.modalOverlay} onClick={() => setConfirmPaymentModal(null)}>
-            <div style={s.modal} onClick={(e) => e.stopPropagation()}>
-              <div style={s.modalHeader}>
-                <h3 style={s.modalTitle}>✅ Confirm EGP Order for Shipping</h3>
-                <p style={s.modalSubtitle}>Review cash on delivery order before confirming for shipping</p>
-              </div>
-
-              <div style={s.modalSection}>
-                <div style={s.modalSectionTitle}>Order Information</div>
-                <div style={{display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 12}}>
-                  <div>
-                    <div style={{fontSize: '0.85rem', color: '#64748b'}}>Order ID</div>
-                    <div style={{fontWeight: 700, color: '#0f172a'}}>{confirmPaymentModal.orderId}</div>
-                  </div>
-                  <div>
-                    <div style={{fontSize: '0.85rem', color: '#64748b'}}>Customer Name</div>
-                    <div style={{fontWeight: 600}}>{confirmPaymentModal.customerName}</div>
-                  </div>
-                  <div>
-                    <div style={{fontSize: '0.85rem', color: '#64748b'}}>Phone</div>
-                    <div>{confirmPaymentModal.customerPhone}</div>
-                  </div>
-                  <div>
-                    <div style={{fontSize: '0.85rem', color: '#64748b'}}>Order Date</div>
-                    <div>{formatDate(confirmPaymentModal.createdAt)}</div>
-                  </div>
-                  <div>
-                    <div style={{fontSize: '0.85rem', color: '#64748b'}}>Status</div>
-                    <span style={s.statusBadge(confirmPaymentModal.status)}>{confirmPaymentModal.status}</span>
-                  </div>
-                </div>
-
-                {/* EGP Customer Location Map */}
-                {confirmPaymentModal.customerLocation && (
-                  <div style={{marginTop: 16}}>
-                    <div style={{fontSize: '0.85rem', color: '#64748b', marginBottom: 8}}>Delivery Location</div>
-                    <div style={{height: 150, borderRadius: 8, overflow: 'hidden', border: `2px solid ${theme.borderColor}`}}>
-                      <iframe
-                        src={`https://www.openstreetmap.org/export/embed.html?bbox=${confirmPaymentModal.customerLocation.longitude - 0.01}%2C${confirmPaymentModal.customerLocation.latitude - 0.01}%2C${confirmPaymentModal.customerLocation.longitude + 0.01}%2C${confirmPaymentModal.customerLocation.latitude + 0.01}&marker=${confirmPaymentModal.customerLocation.latitude}%2C${confirmPaymentModal.customerLocation.longitude}`}
-                        style={{ width: '100%', height: '100%', border: 'none' }}
-                        title="Customer Location"
-                      />
-                    </div>
-                    <a 
-                      href={`https://www.google.com/maps?q=${confirmPaymentModal.customerLocation.latitude},${confirmPaymentModal.customerLocation.longitude}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 8, fontSize: '0.85rem', color: theme.color, textDecoration: 'none'}}
-                    >
-                      🗺️ Open in Google Maps
-                    </a>
-                  </div>
-                )}
-
-                {/* EGP Address */}
-                {confirmPaymentModal.customerAddress && (
-                  <div style={{marginTop: 16, padding: 12, background: '#f8fafc', borderRadius: 8}}>
-                    <div style={{fontSize: '0.85rem', color: '#64748b', marginBottom: 4}}>Delivery Address</div>
-                    <div style={{fontSize: '0.95rem', color: '#0f172a', fontWeight: 500}}>{confirmPaymentModal.customerAddress}</div>
-                  </div>
-                )}
-              </div>
-
-              <div style={s.modalSection}>
-                <div style={s.modalSectionTitle}>Order Items ({confirmPaymentModal.totalItems})</div>
-                <div style={s.modalItems}>
-                  {confirmPaymentModal.items?.map((item, idx) => (
-                    <div key={idx} style={s.modalItem}>
-                      <div style={s.modalItemInfo}>
-                        <div style={{fontSize: '1.5rem'}}>📦</div>
-                        <div style={s.modalItemDetails}>
-                          <h4 style={s.modalItemDetailsH4}>{item.name}</h4>
-                          <p style={s.modalItemDetailsP}>Qty: {item.quantity} × {theme.symbol} {item.price?.toFixed(2)}</p>
-                        </div>
-                      </div>
-                      <div style={s.modalItemPrice}>{theme.symbol} {(item.price * item.quantity).toFixed(2)}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div style={{...s.modalSection, ...s.modalSummary}}>
-                <div style={s.modalSummaryRow}><span>Total Items:</span><span>{confirmPaymentModal.totalItems}</span></div>
-                <div style={s.modalSummaryRow}><span>Currency:</span><span>{confirmPaymentModal.currency}</span></div>
-                <div style={{...s.modalSummaryRow, ...s.modalSummaryRowLast}}><span>Total Amount:</span><span>{theme.symbol} {confirmPaymentModal.totalPrice?.toFixed(2)}</span></div>
-              </div>
-
-              <div style={s.modalActions}>
-                <button onClick={() => setConfirmPaymentModal(null)} style={s.modalBtn('cancel', hoveredModalBtn.cancel)} onMouseEnter={() => setHoveredModalBtn({...hoveredModalBtn, cancel: true})} onMouseLeave={() => setHoveredModalBtn({...hoveredModalBtn, cancel: false})}>Cancel</button>
-                <button onClick={() => onConfirmPayment(confirmPaymentModal)} style={s.modalBtn('confirm', hoveredModalBtn.confirm)} onMouseEnter={() => setHoveredModalBtn({...hoveredModalBtn, confirm: true})} onMouseLeave={() => setHoveredModalBtn({...hoveredModalBtn, confirm: false})}>✓ Confirm for Shipping</button>
-              </div>
-            </div>
-          </div>
-        )}
-      </main>
-    </div>
+        </div>
+      )}
+    </>
   )
 }
+
+
+
