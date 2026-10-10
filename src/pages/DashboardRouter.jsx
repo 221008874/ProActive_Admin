@@ -266,7 +266,7 @@ export default function DashboardRouter() {
         <div className="dr-bar-inner">
           <div className="dr-brand">
             <div className="dr-brand-dot" />
-            <span className="dr-brand-label">Admin</span>
+            <span className="dr-brand-label">ProActive</span>
           </div>
           <div className="dr-tabs">
             {TABS.map(tab => (

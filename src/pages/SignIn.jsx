@@ -384,7 +384,7 @@ export default function SignIn() {
         <div className="signin-card">
           <div className="signin-header">
             <div className="signin-icon">🔐</div>
-            <h1 className="signin-title">Admin Sign In</h1>
+            <h1 className="signin-title">ProActive Admin</h1>
             <p className="signin-subtitle">Enter your credentials to access the dashboard</p>
           </div>
 
