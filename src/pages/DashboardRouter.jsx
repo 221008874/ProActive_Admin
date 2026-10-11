@@ -10,27 +10,25 @@
 // The currency switcher is gone (there is nothing to switch between) and the
 // dashboard's internal tab bar with it: this shell IS the nav. onNavigate wires
 // the sidebar into the dashboard's activeTab state.
+//
+// NOTE this shell is a router-less tab set on purpose for now; the routes are
+// added in the next pass. Labels come from the language context so the sidebar
+// is bilingual like the rest of the panel.
 
 import { useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
+import { useLanguage } from '../context/LanguageContext'
 import { useNavigate } from 'react-router-dom'
 import { signOut } from 'firebase/auth'
 import { auth } from '../services/firebase'
 import DashboardEGP from './DashboardEGP'
-import { AdminShell, Count } from '../ui'
-
-// The dashboard's tab ids. Counts are injected by the app while it renders.
-const NAV = [
-  { key: 'products', label: 'Products' },
-  { key: 'orders', label: 'Orders' },
-  { key: 'confirmed', label: 'Confirmed' },
-  { key: 'coupons', label: 'Coupons' },
-  { key: 'operations', label: 'Operations' }
-]
+import { AdminShell } from '../ui'
+import { NAV } from '../config/nav'
 
 export default function DashboardRouter({ activeTab, onTabChange, badges = {} }) {
   const { currentUser } = useAuth()
   const navigate = useNavigate()
+  const { t } = useLanguage()
 
   useEffect(() => {
     if (!currentUser) navigate('/login')
@@ -40,9 +38,9 @@ export default function DashboardRouter({ activeTab, onTabChange, badges = {} })
 
   const items = NAV.map((n) => ({
     ...n,
+    label: t(n.labelKey),
     href: `#${n.key}`,
-    badge: badges[n.key],
-    badgeTone: n.key === 'products' ? 'low' : undefined
+    badge: n.badge ? badges[n.badge] : undefined
   }))
 
   return (
@@ -52,10 +50,9 @@ export default function DashboardRouter({ activeTab, onTabChange, badges = {} })
       email={currentUser.email}
       onSignOut={() => signOut(auth)}
       onNavigate={onTabChange}
+      labels={{ signOut: t('signOut'), brand: t('admin') }}
     >
       <DashboardEGP />
     </AdminShell>
   )
 }
-
-export { NAV, Count }

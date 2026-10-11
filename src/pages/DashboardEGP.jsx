@@ -290,19 +290,6 @@ const generateCouponsPDF = async () => {
       pdf.setLineWidth(lw)
       pdf.roundedRect(x, y, w, h, r, r, 'S')
     }
-    const dashed = (x1, y, x2, dash = 1.6, gap = 2.2) => {
-      pdf.setLineWidth(0.25)
-      for (let cx = x1; cx < x2; cx += dash + gap) {
-        pdf.line(cx, y, Math.min(cx + dash, x2), y)
-      }
-    }
-    const pill = (x, y, w, h, bgCol, textCol, label, fontSize = 5.5) => {
-      fillR(x, y, w, h, 2, bgCol)
-      pdf.setFont('helvetica', 'normal')
-      pdf.setFontSize(fontSize)
-      pdf.setTextColor(...textCol)
-      pdf.text(label, x + w / 2, y + h / 2 + fontSize * 0.18, { align: 'center' })
-    }
 
     // â•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گ
     // PAGE HEADER

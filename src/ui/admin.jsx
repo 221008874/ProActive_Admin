@@ -6,12 +6,14 @@ import { loc, stockLevel } from "./format";
  * items: [{ key, label, href, badge?, badgeTone? }]   e.g. Orders 12, Low stock 5 (badgeTone: "low")
  * onNavigate: optional (key) => void. When given, an item's click selects it in
  * app state instead of following href — the nav is a router-less tab set.
+ * labels: the strings this shell owns itself (signOut). The design system must
+ * not hard-code English, so the caller passes them translated.
  */
-export function AdminShell({ items, active, email, onSignOut, children, as: Tag = "a", onNavigate }) {
+export function AdminShell({ items, active, email, onSignOut, children, as: Tag = "a", onNavigate, labels = {} }) {
   return (
     <div className="pa-shell">
       <aside className="pa-side">
-        <div className="pa-side__brand"><div className="pa-logo">PROACTIVE</div><small>Admin</small></div>
+        <div className="pa-side__brand"><div className="pa-logo">PROACTIVE</div><small>{labels.brand ?? "Admin"}</small></div>
         {items.map((it) => {
           const p = Tag === "a" ? { href: it.href } : { to: it.href };
           const onClick = onNavigate
@@ -25,7 +27,7 @@ export function AdminShell({ items, active, email, onSignOut, children, as: Tag 
         })}
         <div className="pa-side__foot">
           <div style={{ fontSize: 12, color: "var(--pa-on-dark-2)" }}>{email}</div>
-          <a href="#signout" onClick={(e) => { e.preventDefault(); onSignOut?.(); }} style={{ padding: 0, height: "auto", color: "#fff", fontWeight: 700 }}>Sign out</a>
+          <a href="#signout" onClick={(e) => { e.preventDefault(); onSignOut?.(); }} style={{ padding: 0, height: "auto", color: "#fff", fontWeight: 700 }}>{labels.signOut ?? "Sign out"}</a>
         </div>
       </aside>
       <main className="pa-content">{children}</main>
