@@ -7,9 +7,14 @@
 // The old sheet branded a different business and pointed at a domain this
 // store does not own, so a scanned code led nowhere. Both are fixed here: the
 // origin comes from the page, and the brand is ProActive.
+//
+// Arabic text is shaped with arabic-reshaper + bidi-js and rendered with
+// IBM Plex Sans Arabic (embedded TTF). Codes, numbers and EGP stay LTR.
 
 import { jsPDF } from 'jspdf'
 import QRCode from 'qrcode'
+import ArabicReshaper from 'arabic-reshaper'
+import { getEmbeddingLevels, getReorderedString } from 'bidi-js/dist/bidi.js'
 
 const A4 = { w: 210, h: 297 }
 const COLS = 2
@@ -23,18 +28,97 @@ const GAP = 6
 const CARD_W = (A4.w - PAD * 2 - GAP) / COLS
 const CARD_H = (A4.h - PAD * 2 - GAP * (ROWS - 1)) / ROWS
 
+// Tile inner width for text wrapping (mm)
+const TILE_INNER_W = CARD_W - 8
+
+// Arabic font embedding state
+let arabicFontLoaded = false
+
+async function ensureArabicFont(pdf) {
+  if (arabicFontLoaded) return
+  try {
+    // IBM Plex Sans Arabic Regular and Bold are available via @fontsource
+    // We fetch them as base64 TTF from the fontsource package
+    const [regularRes, boldRes] = await Promise.all([
+      fetch('/fonts/ibm-plex-sans-arabic-regular.ttf'),
+      fetch('/fonts/ibm-plex-sans-arabic-bold.ttf')
+    ])
+    const [regularBuf, boldBuf] = await Promise.all([
+      regularRes.arrayBuffer(),
+      boldRes.arrayBuffer()
+    ])
+    const toB64 = (buf) => btoa(new Uint8Array(buf).reduce((s, b) => s + String.fromCharCode(b), ''))
+    pdf.addFileToVFS('PlexAr.ttf', toB64(regularBuf))
+    pdf.addFont('PlexAr.ttf', 'PlexAr', 'normal')
+    pdf.addFileToVFS('PlexAr-Bold.ttf', toB64(boldBuf))
+    pdf.addFont('PlexAr-Bold.ttf', 'PlexAr', 'bold')
+    arabicFontLoaded = true
+  } catch {
+    // Fallback: font loading failed, Arabic will use default font (may not render correctly)
+    console.warn('Could not load Arabic font for PDF')
+  }
+}
+
+/**
+ * Shape Arabic text for RTL display in jsPDF.
+ * Codes, numbers, EGP, and Latin text remain LTR.
+ */
+function shapeArabic(str, lang) {
+  if (lang !== 'ar') return str
+  // arabic-reshaper joins letters, bidi-js handles RTL ordering
+  const reshaped = ArabicReshaper.reshape(str)
+  const levels = getEmbeddingLevels(reshaped, { rtl: true })
+  return getReorderedString(reshaped, levels)
+}
+
+/**
+ * Wrap text to fit within maxWidth (mm) at given font size.
+ * Returns array of lines.
+ */
+function wrapText(pdf, str, fontSize, maxWidth) {
+  pdf.setFontSize(fontSize)
+  const lines = pdf.splitTextToSize(str, maxWidth)
+  return Array.isArray(lines) ? lines : [lines]
+}
+
+/**
+ * Draw wrapped text centered, returning the Y after the last line.
+ */
+function drawWrappedCenter(pdf, lines, fontSize, x, y, lineHeight = 5) {
+  for (const line of lines) {
+    pdf.text(line, x, y, { align: 'center' })
+    y += lineHeight
+  }
+  return y
+}
+
 export async function couponSheetPdf(coupons = [], lang = 'en', origin = window.location.origin) {
   if (coupons.length === 0) return
 
   const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+  await ensureArabicFont(pdf)
+
   const pages = Math.ceil(coupons.length / PER_PAGE)
 
   for (let p = 0; p < pages; p++) {
     if (p > 0) pdf.addPage()
 
-    text(pdf, 'PROACTIVE', 16, A4.w / 2, PAD + 4, { align: 'center', bold: true })
-    text(pdf, lang === 'ar' ? 'أكواد الخصم' : 'COUPON SHEET', 10, A4.w / 2, PAD + 10, { align: 'center' })
-    text(pdf, `${p + 1} / ${pages}`, 9, A4.w - PAD, PAD + 4, { align: 'right' })
+    // Page header
+    const headerFont = lang === 'ar' ? 'PlexAr' : 'helvetica'
+    pdf.setFont(headerFont, 'bold')
+    pdf.setFontSize(16)
+    pdf.setTextColor(18)
+    pdf.text('PROACTIVE', A4.w / 2, PAD + 4, { align: 'center' })
+
+    pdf.setFont(headerFont, 'normal')
+    pdf.setFontSize(10)
+    const subtitle = lang === 'ar' ? 'أكواد الخصم' : 'COUPON SHEET'
+    pdf.text(shapeArabic(subtitle, lang), A4.w / 2, PAD + 10, { align: 'center' })
+
+    pdf.setFont('helvetica', 'normal')
+    pdf.setFontSize(9)
+    pdf.text(`${p + 1} / ${pages}`, A4.w - PAD, PAD + 4, { align: 'right' })
+
     pdf.setLineWidth(0.5)
     pdf.line(PAD, PAD + 14, A4.w - PAD, PAD + 14)
 
@@ -49,13 +133,13 @@ export async function couponSheetPdf(coupons = [], lang = 'en', origin = window.
       await drawTile(pdf, coupon, x, y, CARD_W, CARD_H, lang, origin)
     }
 
-    text(
-      pdf,
-      lang === 'ar'
-        ? 'صالح للاستخدام مرة واحدة · امسح الكود عند الطلب'
-        : 'Single use · non-transferable · scan at checkout',
-      8, A4.w / 2, A4.h - 6, { align: 'center' }
-    )
+    // Footer
+    pdf.setFont(headerFont, 'normal')
+    pdf.setFontSize(8)
+    const footerText = lang === 'ar'
+      ? 'صالح للاستخدام مرة واحدة · امسح الكود عند الطلب'
+      : 'Single use · non-transferable · scan at checkout'
+    pdf.text(shapeArabic(footerText, lang), A4.w / 2, A4.h - 6, { align: 'center' })
   }
 
   pdf.save(`coupons-${new Date().toISOString().slice(0, 10)}.pdf`)
@@ -69,27 +153,69 @@ async function drawTile(pdf, coupon, x, y, w, h, lang, origin) {
   pdf.setLineWidth(0.5)
   pdf.roundedRect(x, y, w, h, r, r, 'S')
 
-  // The code is the one thing that must be unmissable, so it owns the middle.
-  text(pdf, lang === 'ar' ? 'كود الخصم' : 'COUPON CODE', 8, x + w / 2, y + 12, { align: 'center' })
-  text(pdf, coupon.code, 18, x + w / 2, y + 26, { align: 'center', bold: true, mono: true })
+  const tileCenterX = x + w / 2
+  const isArabic = lang === 'ar'
+  const fontName = isArabic ? 'PlexAr' : 'helvetica'
 
-  const off = coupon.type === 'percent'
-    ? `${coupon.value}% ${lang === 'ar' ? 'خصم' : 'off'}`
-    : `${coupon.value} EGP ${lang === 'ar' ? 'خصم' : 'off'}`
-  text(pdf, off, 13, x + w / 2, y + 36, { align: 'center', bold: true })
+  // Helper to draw text with proper font
+  const drawText = (str, size, xPos, yPos, options = {}) => {
+    const { align = 'left', bold = false } = options
+    pdf.setFont(fontName, bold ? 'bold' : 'normal')
+    pdf.setFontSize(size)
+    pdf.setTextColor(18)
+    const shaped = shapeArabic(str, lang)
+    pdf.text(shaped, xPos, yPos, { align })
+  }
 
+  // "COUPON CODE" label
+  drawText(isArabic ? 'كود الخصم' : 'COUPON CODE', 8, tileCenterX, y + 12, { align: 'center' })
+
+  // The code itself (always LTR, monospace)
+  pdf.setFont('courier', 'bold')
+  pdf.setFontSize(18)
+  pdf.setTextColor(18)
+  pdf.text(coupon.code, tileCenterX, y + 26, { align: 'center' })
+
+  // Discount line: "10% خصم" or "10 EGP خصم" / "10% off" / "10 EGP off"
+  // The number and unit stay LTR, the word "خصم"/"off" follows language
+  const discountLabel = isArabic ? 'خصم' : 'off'
+  let discountText
+  if (coupon.type === 'percent') {
+    discountText = `${coupon.value}% ${discountLabel}`
+  } else {
+    discountText = `${coupon.value} EGP ${discountLabel}`
+  }
+  drawText(discountText, 13, tileCenterX, y + 36, { align: 'center', bold: true })
+
+  // Notes: min order, max uses, expiry — max 3 short lines, wrapped
   const notes = []
-  if (coupon.minOrder > 0) notes.push(lang === 'ar' ? `حد أدنى ${coupon.minOrder} جنيه` : `Min ${coupon.minOrder} EGP`)
-  if (coupon.maxUses) notes.push(lang === 'ar' ? `${coupon.maxUses} استخدام` : `${coupon.maxUses} use${coupon.maxUses > 1 ? 's' : ''}`)
+  if (coupon.minOrder > 0) {
+    notes.push(isArabic ? `الحد الأدنى ${coupon.minOrder} ج.م` : `Min ${coupon.minOrder} EGP`)
+  }
+  if (coupon.maxUses) {
+    notes.push(isArabic ? `${coupon.maxUses} استخدام` : `${coupon.maxUses} use${coupon.maxUses > 1 ? 's' : ''}`)
+  }
   if (coupon.expiresAt) {
     const d = coupon.expiresAt.toDate ? coupon.expiresAt.toDate() : new Date(coupon.expiresAt)
-    notes.push(lang === 'ar' ? `حتى ${d.toLocaleDateString('ar-EG')}` : `Until ${d.toLocaleDateString('en-GB')}`)
-  }
-  if (notes.length) {
-    text(pdf, notes.join(' · '), 8, x + w / 2, y + 44, { align: 'center' })
+    notes.push(isArabic ? `صالح حتى ${d.toLocaleDateString('ar-EG')}` : `Until ${d.toLocaleDateString('en-GB')}`)
   }
 
-  // The QR is what makes the printed card worth anything.
+  if (notes.length) {
+    let noteY = y + 44
+    const noteFontSize = 8
+    const lineHeight = 4.5
+
+    for (const note of notes.slice(0, 3)) {
+      // Wrap each note to tile inner width
+      pdf.setFont(fontName, 'normal')
+      pdf.setFontSize(noteFontSize)
+      const lines = pdf.splitTextToSize(shapeArabic(note, lang), TILE_INNER_W)
+      const lineArray = Array.isArray(lines) ? lines : [lines]
+      noteY = drawWrappedCenter(pdf, lineArray, noteFontSize, tileCenterX, noteY, lineHeight)
+    }
+  }
+
+  // QR code
   const url = `${origin}/coupon/${coupon.code}`
   try {
     const dataUrl = await QRCode.toDataURL(url, {
@@ -103,13 +229,6 @@ async function drawTile(pdf, coupon, x, y, w, h, lang, origin) {
   } catch {
     // A QR that fails to render must not lose the sheet: the code is printed.
   }
-}
-
-function text(pdf, str, size, x, y, { align = 'left', bold = false, mono = false } = {}) {
-  pdf.setFont(mono || !bold ? 'courier' : 'helvetica', bold ? 'bold' : 'normal')
-  pdf.setFontSize(size)
-  pdf.setTextColor(18)
-  pdf.text(String(str ?? ''), x, y, { align })
 }
 
 export default couponSheetPdf

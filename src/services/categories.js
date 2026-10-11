@@ -96,6 +96,9 @@ export async function saveCollection(id, data) {
     // A manual list, capped: a collection is a curated shelf, not a query.
     productIds: (data.productIds ?? []).slice(0, 50),
     banner: data.banner || null,
+    type: data.type ?? 'tile',
+    startsAt: data.startsAt ?? null,
+    endsAt: data.endsAt ?? null,
     order: Number(data.order ?? 0),
     active: data.active !== false,
     ...(id ? {} : { createdAt: serverTimestamp() }),

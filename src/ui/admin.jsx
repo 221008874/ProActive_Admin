@@ -70,7 +70,6 @@ export function StockGrid({ colors, sizes, stock, onChange, lang = "en", totalLa
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-        <div style={{ fontSize: 12, fontWeight: 700 }}>Stock by colour and size</div>
         <div className="pa-subtitle" style={{ fontSize: 12 }}>{totalLabel ?? `Total ${total} · 0 = sold out`}</div>
       </div>
       <div className="pa-stock" style={{ "--cols": sizes.length }}>

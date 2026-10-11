@@ -11,11 +11,11 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
-  Button, EmptyState, ErrorState, Field, IconTrash, PageTitle, Select, Skeleton, StatusPill
+  Button, Checkbox, EmptyState, ErrorState, Field, IconClose, IconTrash, PageTitle, Select, Skeleton, StatusPill
 } from '../ui'
 import { useLanguage } from '../context/LanguageContext'
 import { useToast } from '../ui/overlays'
-import { bulkGenerate, setCouponActive, deleteCoupon, fetchCoupons } from '../services/coupons'
+import { bulkGenerate, setCouponActive, updateCoupon, deleteCoupon, fetchCoupons } from '../services/coupons'
 import { couponSheetPdf } from '../services/couponSheet'
 
 const label = (t, lang) => (key, en, ar) => {
@@ -45,6 +45,15 @@ export default function CouponsPage() {
   const [maxUses, setMaxUses] = useState(1)
   const [expiresInDays, setExpiresInDays] = useState('')
   const [formError, setFormError] = useState('')
+
+  // Edit dialog state
+  const [editingCoupon, setEditingCoupon] = useState(null)
+  const [editType, setEditType] = useState('percent')
+  const [editValue, setEditValue] = useState(10)
+  const [editMinOrder, setEditMinOrder] = useState(0)
+  const [editMaxUses, setEditMaxUses] = useState(1)
+  const [editExpiresInDays, setEditExpiresInDays] = useState('')
+  const [editError, setEditError] = useState('')
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -86,7 +95,7 @@ export default function CouponsPage() {
     }
   }
 
-  const toggle = async (coupon, active) => {
+  const toggleCoupon = async (coupon, active) => {
     try {
       await setCouponActive(coupon.code, active)
       setReload((n) => n + 1)
@@ -105,6 +114,35 @@ export default function CouponsPage() {
     } catch (e) {
       console.error('Could not delete coupon:', e)
       toast.show(e?.message ?? t('error'))
+    }
+  }
+
+  const openEdit = (coupon) => {
+    setEditingCoupon(coupon)
+    setEditType(coupon.type)
+    setEditValue(coupon.value)
+    setEditMinOrder(coupon.minOrder ?? 0)
+    setEditMaxUses(coupon.maxUses ?? 1)
+    setEditExpiresInDays(coupon.expiresAt ? Math.ceil((new Date(coupon.expiresAt.toDate ? coupon.expiresAt.toDate() : coupon.expiresAt).getTime() - Date.now()) / 864e5) : '')
+    setEditError('')
+  }
+
+  const saveEdit = async () => {
+    setEditError('')
+    try {
+      await updateCoupon(editingCoupon.code, {
+        type: editType,
+        value: Number(editValue),
+        minOrder: Number(editMinOrder) || 0,
+        maxUses: Number(editMaxUses) || null,
+        expiresAt: editExpiresInDays ? new Date(Date.now() + Number(editExpiresInDays) * 864e5) : null
+      })
+      toast.show(L('couponUpdated', 'Coupon updated', 'تم تحديث الكود'))
+      setEditingCoupon(null)
+      setReload((n) => n + 1)
+    } catch (e) {
+      console.error('Could not update coupon:', e)
+      setEditError(e?.errors ? Object.values(e.errors).join(' ') : e.message)
     }
   }
 
@@ -214,7 +252,7 @@ export default function CouponsPage() {
                   <span role="columnheader">{t('usedCount')}</span>
                   <span role="columnheader">{t('expiresAt')}</span>
                   <span role="columnheader">{t('status')}</span>
-                  <span role="columnheader">{t('edit')}</span>
+                  <span role="columnheader">{t('actions')}</span>
                 </div>
                 {coupons.map((c) => {
                   const used = Number(c.usedCount ?? 0)
@@ -226,23 +264,26 @@ export default function CouponsPage() {
                     <div key={c.code} className="pa-tr" role="row">
                       <span role="cell"><b className="pa-ltr">{c.code}</b></span>
                       <span role="cell">
-                        {c.type === 'percent' ? `${c.value}%` : `${c.value} EGP`}
-                        {c.minOrder > 0 && <><br /><span className="pa-subtitle">{`min ${c.minOrder}`}</span></>}
+                        {formatDiscount(c, lang)}
+                        {formatCondition(c, lang) && (
+                          <><br /><span className="pa-subtitle">{formatCondition(c, lang)}</span></>
+                        )}
                       </span>
                       <span role="cell"><bdi>{max == null ? `${used} / ∞` : `${used} / ${max}`}</bdi></span>
                       <span role="cell" className="pa-subtitle">
                         {c.expiresAt ? whenDate(c.expiresAt, lang) : L('noExpiry', 'No expiry', 'منتهيمش')}
                       </span>
                       <span role="cell">
-                        <StatusPill
-                          status={!c.active ? 'neutral' : expired ? 'cancelled' : exhausted ? 'pending' : 'delivered'}
-                          label={!c.active ? t('statusOff') : expired ? t('statusExpired') : exhausted ? t('statusUsedUp') : t('statusActive')}
+                        <Toggle
+                          on={c.active}
+                          onChange={(on) => toggleCoupon(c, on)}
+                          label={c.active ? t('statusActive') : t('statusOff')}
                         />
                       </span>
                       <span role="cell" style={{ display: 'flex', gap: 6 }}>
                         <button type="button" className="pa-btn pa-btn--sm pa-btn--outline"
-                          onClick={() => toggle(c, !c.active)}>
-                          {c.active ? t('statusOff') : t('active')}
+                          onClick={() => openEdit(c)}>
+                          {t('edit')}
                         </button>
                         <button type="button" className="pa-btn pa-btn--sm pa-btn--outline"
                           aria-label={`${t('delete')} ${c.code}`} onClick={() => remove(c)}>
@@ -257,7 +298,73 @@ export default function CouponsPage() {
           )}
         </section>
       </div>
+      {editingCoupon && (
+        <CouponEditDialog
+          coupon={editingCoupon}
+          t={t}
+          L={L}
+          onClose={() => setEditingCoupon(null)}
+          onSave={saveEdit}
+          saving={false}
+          editType={editType}
+          editValue={editValue}
+          editMinOrder={editMinOrder}
+          editMaxUses={editMaxUses}
+          editExpiresInDays={editExpiresInDays}
+          editError={editError}
+          setEditType={setEditType}
+          setEditValue={setEditValue}
+          setEditMinOrder={setEditMinOrder}
+          setEditMaxUses={setEditMaxUses}
+          setEditExpiresInDays={setEditExpiresInDays}
+        />
+      )}
     </div>
+  )
+}
+
+function CouponEditDialog({ coupon, t, L, onClose, onSave, saving, editType, editValue, editMinOrder, editMaxUses, editExpiresInDays, editError, setEditType, setEditValue, setEditMinOrder, setEditMaxUses, setEditExpiresInDays }) {
+  const valueLabel = editType === 'percent' ? `${t('value')} %` : t('value')
+  return (
+    <>
+      <div className="pa-sheet-backdrop" onClick={onClose} />
+      <aside className="pa-editor" role="dialog" aria-modal="true" aria-label={t('editCoupon')}>
+        <header className="pa-editor__head">
+          <h2>{t('editCoupon')}</h2>
+          <button type="button" className="pa-icon-btn" style={{ width: 44, height: 44 }}
+            aria-label={L('close', 'Close', 'إغلاق')} onClick={onClose}>
+            <IconClose width={22} height={22} />
+          </button>
+        </header>
+        <div className="pa-editor__body">
+          <div className="pa-editor__row">
+            <Field id="ec-code" label={t('couponCode')} admin className="pa-ltr" value={coupon.code} readOnly />
+          </div>
+          <div className="pa-editor__row">
+            <Select id="ec-type" label={t('type')} value={editType} onChange={(e) => setEditType(e.target.value)}>
+              <option value="percent">{t('typePercent')}</option>
+              <option value="fixed">{t('typeFixed')}</option>
+            </Select>
+            <Field id="ec-value" label={valueLabel}
+              type="number" min="1" admin value={editValue} onChange={(e) => setEditValue(e.target.value)} />
+          </div>
+          <div className="pa-editor__row">
+            <Field id="ec-min" label={t('minimumOrder')} type="number" min="0" admin
+              value={editMinOrder} onChange={(e) => setEditMinOrder(e.target.value)} />
+            <Field id="ec-max" label={t('usesPerCode')} type="number" min="1" admin
+              value={editMaxUses} onChange={(e) => setEditMaxUses(e.target.value)} />
+          </div>
+          <Field id="ec-exp" label={`${t('expires')} (${t('optional')})`} type="number" min="1" admin
+            value={editExpiresInDays} onChange={(e) => setEditExpiresInDays(e.target.value)}
+            hint={L('expiresHint', 'Days from now. Blank means no expiry.', 'أيام من دلوقتي. فاضي يعني منتهيمش.')} />
+          {editError && <div className="pa-error" role="alert">{editError}</div>}
+        </div>
+        <footer className="pa-editor__foot">
+          <Button variant="outline" onClick={onClose}>{L('cancel', 'Cancel', 'إلغاء')}</Button>
+          <Button onClick={onSave}>{t('save')}</Button>
+        </footer>
+      </aside>
+    </>
   )
 }
 
@@ -284,4 +391,30 @@ function whenDate(ts, lang) {
   const d = ts?.toDate ? ts.toDate() : new Date(ts)
   if (Number.isNaN(d.getTime())) return '—'
   return d.toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+}
+
+/** A switch that reads as a switch but is a real checkbox underneath. */
+function Toggle({ on, onChange, label }) {
+  return (
+    <label className="pa-switch">
+      <input type="checkbox" checked={on} onChange={(e) => onChange(e.target.checked)} aria-label={label} />
+      <span className="pa-switch__track" aria-hidden="true"><span className="pa-switch__thumb" /></span>
+    </label>
+  )
+}
+
+/** Format discount for display: "10%" or "10 ج.م" / "10 EGP" */
+function formatDiscount(coupon, lang) {
+  if (coupon.type === 'percent') {
+    return `${coupon.value}%`
+  }
+  return lang === 'ar' ? `${coupon.value} ج.م` : `${coupon.value} EGP`
+}
+
+/** Format condition for display: "الحد الأدنى 5 ج.م" / "Min 5 EGP" */
+function formatCondition(coupon, lang) {
+  if (coupon.minOrder > 0) {
+    return lang === 'ar' ? `الحد الأدنى ${coupon.minOrder} ج.م` : `Min ${coupon.minOrder} EGP`
+  }
+  return ''
 }

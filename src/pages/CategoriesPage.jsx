@@ -8,7 +8,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import {
   Button, Checkbox, EmptyState, ErrorState, Field, IconClose, IconTrash, PageTitle,
-  Select, Skeleton, thumb
+  Select, Skeleton, thumb, formatEGP
 } from '../ui'
 import { useLanguage } from '../context/LanguageContext'
 import { useToast } from '../ui/overlays'
@@ -17,6 +17,7 @@ import {
   fetchCollections, saveCollection, deleteCollection
 } from '../services/categories'
 import { fetchAllProducts } from '../services/products'
+import { uploadImage } from '../services/cloudinary'
 
 const label = (t, lang) => (key, en, ar) => {
   if (key) {
@@ -293,25 +294,56 @@ function CollectionEditor({ collection, L, onClose, onSaved }) {
   const [titleAr, setTitleAr] = useState(collection.title?.ar ?? '')
   const [slug, setSlug] = useState(collection.slug ?? '')
   const [banner, setBanner] = useState(collection.banner ?? '')
+  const [type, setType] = useState(collection.type ?? 'tile')
+  const [startsAt, setStartsAt] = useState(collection.startsAt ? new Date(collection.startsAt.toDate ? collection.startsAt.toDate() : collection.startsAt).toISOString().slice(0, 16) : '')
+  const [endsAt, setEndsAt] = useState(collection.endsAt ? new Date(collection.endsAt.toDate ? collection.endsAt.toDate() : collection.endsAt).toISOString().slice(0, 16) : '')
   const [order, setOrder] = useState(String(collection.order ?? 0))
   const [active, setActive] = useState(collection.active !== false)
   const [products, setProducts] = useState([])
+  const [filteredProducts, setFilteredProducts] = useState([])
+  const [searchQuery, setSearchQuery] = useState('')
   const [selected, setSelected] = useState(() => new Set(collection.productIds ?? []))
   const [saving, setSaving] = useState(false)
+  const [uploadingBanner, setUploadingBanner] = useState(false)
 
   useEffect(() => {
     let alive = true
     fetchAllProducts()
-      .then((list) => { if (alive) setProducts(list) })
+      .then((list) => { if (alive) { setProducts(list); setFilteredProducts(list) } })
       .catch((e) => console.warn('Could not load products for the collection:', e))
     return () => { alive = false }
   }, [])
 
+  useEffect(() => {
+    const q = searchQuery.trim().toLowerCase()
+    if (!q) {
+      setFilteredProducts(products)
+    } else {
+      setFilteredProducts(products.filter((p) =>
+        (p.title?.en ?? '').toLowerCase().includes(q) ||
+        (p.title?.ar ?? '').toLowerCase().includes(q) ||
+        p.id.toLowerCase().includes(q)
+      ))
+    }
+  }, [searchQuery, products])
+
   const save = async () => {
+    // Validate required fields
+    if (!titleEn.trim() || !titleAr.trim()) {
+      toast.show(L('needTitles', 'Collection name is required in both languages.', 'اسم التشكيلة مطلوب باللغتين.'))
+      return
+    }
+    if (!slug.trim()) {
+      toast.show(L('needSlug', 'Slug is required.', 'الرابط المختصر مطلوب.'))
+      return
+    }
+
     setSaving(true)
     try {
       await saveCollection(collection.isNew ? null : collection.id, {
-        titleEn, titleAr, slug, banner, order: Number(order), active,
+        titleEn, titleAr, slug, banner, type, order: Number(order), active,
+        startsAt: startsAt ? new Date(startsAt) : null,
+        endsAt: endsAt ? new Date(endsAt) : null,
         // A collection is a curated shelf, so the list is capped rather than
         // becoming an unbounded join table.
         productIds: [...selected].slice(0, 50)
@@ -321,8 +353,30 @@ function CollectionEditor({ collection, L, onClose, onSaved }) {
     } catch (e) {
       console.error('Could not save collection:', e)
       toast.show(e?.message ?? t('error'))
+    } finally {
       setSaving(false)
     }
+  }
+
+  const handleBannerUpload = async (file) => {
+    if (!file || !file.type.startsWith('image/')) {
+      toast.show(L('invalidImage', 'Please select an image file.', 'يرجى اختيار ملف صورة.'))
+      return
+    }
+    setUploadingBanner(true)
+    try {
+      const url = await uploadImage(file)
+      setBanner(url)
+    } catch (e) {
+      console.error('Banner upload failed:', e)
+      toast.show(L('uploadFailed', 'Upload failed', 'فشل الرفع'))
+    } finally {
+      setUploadingBanner(false)
+    }
+  }
+
+  const removeBanner = () => {
+    setBanner('')
   }
 
   const toggle = (id) => {
@@ -340,28 +394,72 @@ function CollectionEditor({ collection, L, onClose, onSaved }) {
         <Field id="co-en" label={t('nameEn')} admin value={titleEn} onChange={(e) => setTitleEn(e.target.value)} />
         <Field id="co-ar" label={t('nameAr')} admin dir="rtl" value={titleAr} onChange={(e) => setTitleAr(e.target.value)} />
       </div>
-      <Field id="co-slug" label={t('slug')} admin className="pa-ltr" value={slug} onChange={(e) => setSlug(e.target.value)} />
-      <Field id="co-banner" label={`${t('banner')} (${t('optional')})`} admin className="pa-ltr" value={banner}
-        onChange={(e) => setBanner(e.target.value)} />
+      <Field id="co-slug" label={t('slug')} admin className="pa-ltr" value={slug} onChange={(e) => setSlug(e.target.value)}
+        hint={L('slugHint', 'Used in links. Generated from the English name when empty.', 'بيتستخدم في الروابط. بيتولد من الاسم الإنجليزي لو فاضي.')} />
+      <Select id="co-type" label={t('collectionType')} value={type} onChange={(e) => setType(e.target.value)}>
+        <option value="hero">{t('typeHero')}</option>
+        <option value="tile">{t('typeTile')}</option>
+        <option value="row">{t('typeRow')}</option>
+      </Select>
+      <div className="pa-editor__row">
+        <Field id="co-starts" label={`${t('startsAt')} (${t('optional')})`} type="datetime-local" admin value={startsAt} onChange={(e) => setStartsAt(e.target.value)} />
+        <Field id="co-ends" label={`${t('endsAt')} (${t('optional')})`} type="datetime-local" admin value={endsAt} onChange={(e) => setEndsAt(e.target.value)} />
+      </div>
       <Field id="co-order" label={t('order')} type="number" admin value={order} onChange={(e) => setOrder(e.target.value)} />
       <Checkbox id="co-active" label={t('active')} checked={active} onChange={setActive} />
 
+      {/* Banner upload */}
+      <div>
+        <label className="pa-label">{t('banner')} ({t('optional')})</label>
+        {banner ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            <img src={thumb(banner, 300)} alt="" style={{ width: 120, height: 80, objectFit: 'cover', borderRadius: 4 }} />
+            <Button variant="outline" size="sm" onClick={removeBanner} disabled={uploadingBanner}>{t('remove')}</Button>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <input
+              type="file"
+              accept="image/*"
+              className="pa-sr"
+              id="banner-upload"
+              onChange={(e) => { if (e.target.files?.[0]) handleBannerUpload(e.target.files[0]); e.target.value = '' }}
+              disabled={uploadingBanner}
+            />
+            <label htmlFor="banner-upload" className="pa-btn pa-btn--outline pa-btn--sm" style={{ cursor: 'pointer' }}>
+              {uploadingBanner ? L('uploading', 'Uploading…', 'جاري الرفع…') : L('chooseFile', 'Choose file', 'اختر ملف')}
+            </label>
+          </div>
+        )}
+      </div>
+
+      {/* Product picker */}
       <div>
         <div className="pa-group-title">
           {t('selectProducts')}
           <span className="pa-subtitle" style={{ marginInlineStart: 8, fontWeight: 400 }}>{selected.size} / 50</span>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(96px, 1fr))', gap: 8 }}>
-          {products.map((p) => {
+        <Field id="co-search" label={t('searchProducts')} admin className="pa-ltr" value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          hint={L('searchProductsHint', 'Search by name or ID', 'ابحث بالاسم أو المعرف')} />
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 8, maxHeight: 300, overflow: 'auto' }}>
+          {filteredProducts.map((p) => {
             const on = selected.has(p.id)
             return (
-              <button key={p.id} type="button" className="pa-productpick" aria-pressed={on}
-                onClick={() => toggle(p.id)}>
-                <span className="pa-thumb" style={{ width: '100%', height: 60, backgroundImage: p.images?.[0]?.url ? `url(${thumb(p.images[0].url, 120)})` : undefined }} />
-                <span>{p.title?.en ?? p.id}</span>
-              </button>
+              <label key={p.id} className="pa-productpick" style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <input type="checkbox" checked={on} onChange={() => toggle(p.id)} style={{ width: 16, height: 16 }} />
+                <span className="pa-thumb" style={{ width: '100%', height: 80, backgroundImage: p.images?.[0]?.url ? `url(${thumb(p.images[0].url, 120)})` : undefined }} />
+                <span style={{ fontSize: 12, fontWeight: 600 }}>{p.title?.en ?? p.id}</span>
+                <span className="pa-subtitle" style={{ fontSize: 11 }}>{p.price ? formatEGP(p.price, 'en') : ''}</span>
+                <span className="pa-subtitle" style={{ fontSize: 11, textTransform: 'capitalize' }}>{p.status ?? 'active'}</span>
+              </label>
             )
           })}
+          {filteredProducts.length === 0 && (
+            <div className="pa-subtitle" style={{ gridColumn: '1 / -1', textAlign: 'center', padding: 16 }}>
+              {searchQuery ? L('noProductsFound', 'No products match your search.', 'لا توجد منتجات تطابق بحثك.') : L('noProducts', 'No products yet', 'لا توجد منتجات بعد')}
+            </div>
+          )}
         </div>
       </div>
     </Panel>

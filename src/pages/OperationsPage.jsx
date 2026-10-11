@@ -10,7 +10,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
-  Button, ErrorState, PageTitle, Skeleton
+  Button, ErrorState, Field, PageTitle, Skeleton
 } from '../ui'
 import { useLanguage } from '../context/LanguageContext'
 import { useToast } from '../ui/overlays'
@@ -30,64 +30,6 @@ const label = (t, lang) => (key, en, ar) => {
   return lang === 'ar' ? ar : en
 }
 
-/** A cell that saves itself on blur and says so. */
-function SettingCell({ value, onSave, type = 'number', min = 0, suffix, ariaLabel, disabled, savedLabel = 'Saved' }) {
-  const [draft, setDraft] = useState(value == null ? '' : String(value))
-  const [dirty, setDirty] = useState(false)
-  const [saved, setSaved] = useState(false)
-  const timer = useRef(null)
-
-  // An external change (a reload, another row) should update the field, but
-  // not one the owner is part way through typing into. Adjusting during render
-  // keeps this out of the cascading-render trap.
-  const incoming = value == null ? '' : String(value)
-  if (!dirty && draft !== incoming) {
-    setDraft(incoming)
-  }
-
-  useEffect(() => () => clearTimeout(timer.current), [])
-
-  const commit = async () => {
-    if (disabled) return
-    const parsed = type === 'number' ? Number(draft) : draft
-    if (type === 'number' && !Number.isFinite(parsed)) { setDraft(incoming); setDirty(false); return }
-    if (String(parsed) === String(value ?? '')) { setDirty(false); return }
-
-    try {
-      await onSave(parsed)
-      setDirty(false)
-      setSaved(true)
-      clearTimeout(timer.current)
-      timer.current = setTimeout(() => setSaved(false), 1600)
-    } catch (e) {
-      console.error('Could not save setting:', e)
-      setDraft(incoming)
-      setDirty(false)
-    }
-  }
-
-  return (
-    <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-      <input
-        className="pa-input pa-input--admin pa-cell-input"
-        type={type}
-        min={type === 'number' ? min : undefined}
-        step={type === 'number' ? 'any' : undefined}
-        value={draft}
-        disabled={disabled}
-        aria-label={ariaLabel}
-        onChange={(e) => { setDraft(e.target.value); setDirty(true) }}
-        onBlur={commit}
-        onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur() }}
-      />
-      {suffix && <span className="pa-subtitle">{suffix}</span>}
-      <span className="pa-savedtick" data-on={saved} aria-live="polite">
-        {saved ? savedLabel : ''}
-      </span>
-    </span>
-  )
-}
-
 export default function OperationsPage() {
   const { t, lang } = useLanguage()
   const toast = useToast()
@@ -101,6 +43,11 @@ export default function OperationsPage() {
   const [error, setError] = useState(null)
   const [reload, setReload] = useState(0)
   const [publishing, setPublishing] = useState(false)
+  const [savingSettings, setSavingSettings] = useState(false)
+
+  // Store settings form state
+  const [freeShippingThreshold, setFreeShippingThreshold] = useState('')
+  const [whatsapp, setWhatsapp] = useState('')
 
   const publishCatalog = async () => {
     setPublishing(true)
@@ -129,6 +76,9 @@ export default function OperationsPage() {
       const [list, general] = await Promise.all([fetchGovernorates(), fetchSettings()])
       setGovs(list)
       setSettings(general)
+      // Initialize form fields from loaded settings
+      setFreeShippingThreshold(general.freeShippingThreshold ?? 800)
+      setWhatsapp(general.whatsapp ?? '')
     } catch (e) {
       console.error('Could not load operations settings:', e)
       setError(e)
@@ -148,6 +98,21 @@ export default function OperationsPage() {
       console.error('Could not save settings:', e)
       toast.show(e?.message ?? t('error'))
       throw e
+    }
+  }
+
+  const saveStoreSettings = async () => {
+    setSavingSettings(true)
+    try {
+      await saveGeneral({
+        freeShippingThreshold: Number(freeShippingThreshold),
+        whatsapp: whatsapp
+      })
+      toast.show(t('saved'))
+    } catch (e) {
+      console.error('Could not save store settings:', e)
+    } finally {
+      setSavingSettings(false)
     }
   }
 
@@ -205,24 +170,34 @@ export default function OperationsPage() {
           </section>
 
           <section className="pa-block" style={{ border: '1px solid var(--pa-ink)' }}>
-            <h2 style={{ fontSize: 18, marginBottom: 10 }}>{t('storeSettings')}</h2>
+            <h2 style={{ fontSize: 18, marginBottom: 16 }}>{t('storeSettings')}</h2>
             <div className="pa-editor__row">
-              <SettingCell
-                value={settings.freeShippingThreshold}
-                onSave={(v) => saveGeneral({ freeShippingThreshold: v })}
-                suffix="EGP"
-                ariaLabel={t('freeShippingFrom')}
-                savedLabel={savedLabel}
+              <Field
+                id="fs-threshold"
+                label={t('freeShippingFrom')}
+                type="number"
+                min="0"
+                step="1"
+                value={freeShippingThreshold}
+                onChange={(e) => setFreeShippingThreshold(e.target.value)}
+                suffix="ج.م"
               />
-              <SettingCell
-                type="text"
-                value={settings.whatsapp ?? ''}
-                onSave={(v) => saveGeneral({ whatsapp: v })}
-                ariaLabel={t('whatsappNumber')}
-                savedLabel={savedLabel}
+              <Field
+                id="whatsapp-number"
+                label={t('whatsappNumber')}
+                type="tel"
+                value={whatsapp}
+                onChange={(e) => setWhatsapp(e.target.value)}
+                inputMode="tel"
+                dir="ltr"
               />
             </div>
-            <p className="pa-subtitle" style={{ marginTop: 4 }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}>
+              <Button onClick={saveStoreSettings} disabled={savingSettings}>
+                {savingSettings ? L('saving', 'Saving…', 'جاري الحفظ…') : t('saveSettings')}
+              </Button>
+            </div>
+            <p className="pa-subtitle" style={{ marginTop: 8 }}>
               {L('settingsLabels', 'Free shipping threshold, and the WhatsApp number shown to customers.',
                 'حد الشحن المجاني، ورقم الواتساب اللي بيظهر للعملاء.')}
             </p>

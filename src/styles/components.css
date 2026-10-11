@@ -433,9 +433,9 @@ details[open] > summary::after, .pa-acc details[open] summary::after { transform
 .pa-coloradder { display: inline-flex; flex-direction: column; gap: 8px; padding: 10px; border: 1px solid var(--pa-line); }
 
 /* Photo tiles: the first is primary (ink outline) and each carries its colour. */
-.pa-photogrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(68px, 1fr)); gap: 8px; }
+.pa-photogrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: 8px; }
 .pa-phototile {
-  position: relative; aspect-ratio: 52 / 68; background: var(--pa-stone);
+  position: relative; aspect-ratio: 3 / 4; background: var(--pa-stone);
   border: 1px solid var(--pa-line); display: grid; place-items: center; overflow: hidden;
 }
 .pa-phototile.is-primary { border: 2px solid var(--pa-ink); }
@@ -446,7 +446,7 @@ details[open] > summary::after, .pa-acc details[open] summary::after { transform
   border: 0; background: var(--pa-ink); color: var(--pa-paper); font: 700 11px var(--pa-font-body); cursor: pointer;
 }
 .pa-phototile__remove {
-  position: absolute; top: 2px; inset-inline-end: 2px; width: 22px; height: 22px;
+  position: absolute; top: 2px; inset-inline-end: 2px; width: 44px; height: 44px;
   border: 0; background: var(--pa-paper); color: var(--pa-ink); display: grid; place-items: center; cursor: pointer;
 }
 .pa-phototile--dashed {

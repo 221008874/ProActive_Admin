@@ -20,7 +20,13 @@ import {
 } from '../services/products'
 import { uploadImage } from '../services/cloudinary'
 
-const SIZE_OPTIONS = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '2XL', '3XL']
+// Canonical size order — "2XL" is an alias for "XXL" and is normalised on load/save.
+const SIZE_OPTIONS = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL']
+
+/** Normalise legacy "2XL" → "XXL" in a size array. */
+function normaliseSizes(arr) {
+  return (arr ?? []).map((s) => (s === '2XL' ? 'XXL' : s))
+}
 
 export default function ProductEditor({ productId, copyFrom, categories, L, onClose, onSaved }) {
   const { t, lang } = useLanguage()
@@ -30,6 +36,8 @@ export default function ProductEditor({ productId, copyFrom, categories, L, onCl
   const [error, setError] = useState(null)
   const [saving, setSaving] = useState(false)
   const [formErrors, setFormErrors] = useState({})
+  // Track which fields have been touched to only show validation after interaction
+  const [touched, setTouched] = useState({})
 
   const [title, setTitle] = useState({ ar: '', en: '' })
   const [description, setDescription] = useState({ ar: '', en: '' })
@@ -78,7 +86,7 @@ export default function ProductEditor({ productId, copyFrom, categories, L, onCl
         setShowNew(!!p.isNew)
         setFeatured(!!p.isFeatured)
         setColors(p.colors ?? [])
-        setSizes(p.sizes ?? [])
+        setSizes(normaliseSizes(p.sizes ?? []))
         setImages((p.images ?? []).map((i) => ({ ...i, primary: !!i.isPrimary })))
         setStock(Object.fromEntries((p.variants ?? []).map((v) => [`${v.colorId}_${v.size}`, Number(v.stock ?? 0)])))
       } catch (e) {
@@ -102,6 +110,20 @@ export default function ProductEditor({ productId, copyFrom, categories, L, onCl
   )
 
   const save = async () => {
+    // Mark all fields as touched on save attempt so validation shows
+    setTouched({
+      title: true,
+      slug: true,
+      categoryId: true,
+      price: true,
+      compareAt: true,
+      colors: true,
+      sizes: true,
+      images: true,
+      description: true,
+      material: true,
+      care: true
+    })
     setSaving(true)
     setFormErrors({})
     try {
@@ -175,7 +197,7 @@ export default function ProductEditor({ productId, copyFrom, categories, L, onCl
     )
   }
 
-  return (
+return (
     <EditorShell
       title={productId ? t('editProduct') : t('addProduct')}
       L={L}
@@ -199,13 +221,19 @@ export default function ProductEditor({ productId, copyFrom, categories, L, onCl
       <section className="pa-editor__section">
         <div className="pa-editor__row">
           <Field id="e-title-en" label={t('nameEn')} value={title.en}
-            onChange={(e) => setTitle((p) => ({ ...p, en: e.target.value }))} error={formErrors.title} />
+            onChange={(e) => setTitle((p) => ({ ...p, en: e.target.value }))}
+            onBlur={() => setTouched((prev) => ({ ...prev, title: true }))}
+            error={formErrors.title && (touched.title || saving) ? (t(formErrors.title) ?? formErrors.title) : undefined} />
           <Field id="e-title-ar" label={t('nameAr')} value={title.ar} dir="rtl"
-            onChange={(e) => setTitle((p) => ({ ...p, ar: e.target.value }))} />
+            onChange={(e) => setTitle((p) => ({ ...p, ar: e.target.value }))}
+            onBlur={() => setTouched((prev) => ({ ...prev, title: true }))}
+            error={formErrors.title && (touched.title || saving) ? (t(formErrors.title) ?? formErrors.title) : undefined} />
         </div>
         <div className="pa-editor__row">
           <Field id="e-slug" label={`${t('slug')} (${t('optional')})`} value={slug}
             onChange={(e) => setSlug(e.target.value)}
+            onBlur={() => setTouched((prev) => ({ ...prev, slug: true }))}
+            error={formErrors.slug && (touched.slug || saving) ? (t(formErrors.slug) ?? formErrors.slug) : undefined}
             hint={L('slugHint', 'Used in links. Generated from the English title when empty.', 'بيتستخدم في الروابط. بيتولد من الاسم الإنجليزي لو فاضي.')} />
           <Select id="e-status" label={t('status')} value={status} onChange={(e) => setStatus(e.target.value)}>
             <option value="active">{t('active')}</option>
@@ -214,25 +242,34 @@ export default function ProductEditor({ productId, copyFrom, categories, L, onCl
           </Select>
         </div>
         <Select id="e-category" label={t('category')} value={categoryId}
-          onChange={(e) => setCategoryId(e.target.value)} error={formErrors.categoryId}>
+          onChange={(e) => setCategoryId(e.target.value)}
+          onBlur={() => setTouched((prev) => ({ ...prev, categoryId: true }))}
+          error={formErrors.categoryId && (touched.categoryId || saving) ? (t(formErrors.categoryId) ?? formErrors.categoryId) : undefined}>
           <option value="">{L('noCategory', 'No category', 'بدون قسم')}</option>
           {categories.map((c) => (
             <option key={c.id} value={c.id}>{loc(c.name, lang)}</option>
           ))}
         </Select>
         <Field id="e-desc-en" label={`${t('description')} (EN)`} value={description.en}
-          onChange={(e) => setDescription((p) => ({ ...p, en: e.target.value }))} />
+          onChange={(e) => setDescription((p) => ({ ...p, en: e.target.value }))}
+          onBlur={() => setTouched((prev) => ({ ...prev, description: true }))}
+          error={formErrors.description && (touched.description || saving) ? (t(formErrors.description) ?? formErrors.description) : undefined} />
         <Field id="e-desc-ar" label={`${t('description')} (AR)`} value={description.ar} dir="rtl"
-          onChange={(e) => setDescription((p) => ({ ...p, ar: e.target.value }))} />
+          onChange={(e) => setDescription((p) => ({ ...p, ar: e.target.value }))}
+          onBlur={() => setTouched((prev) => ({ ...prev, description: true }))}
+          error={formErrors.description && (touched.description || saving) ? (t(formErrors.description) ?? formErrors.description) : undefined} />
       </section>
 
       <section className="pa-editor__section">
-        <div className="pa-group-title">{t('price')}</div>
         <div className="pa-editor__row">
           <Field id="e-price" label={t('price')} type="number" min="0" step="0.01" value={price}
-            onChange={(e) => setPrice(e.target.value)} error={formErrors.price} />
+            onChange={(e) => setPrice(e.target.value)}
+            onBlur={() => setTouched((prev) => ({ ...prev, price: true }))}
+            error={formErrors.price && (touched.price || saving) ? (t(formErrors.price) ?? formErrors.price) : undefined} />
           <Field id="e-compare" label={t('compareAtPrice')} type="number" min="0" step="0.01" value={compareAt}
-            onChange={(e) => setCompareAt(e.target.value)} error={formErrors.compareAtPrice}
+            onChange={(e) => setCompareAt(e.target.value)}
+            onBlur={() => setTouched((prev) => ({ ...prev, compareAt: true }))}
+            error={formErrors.compareAtPrice && (touched.compareAt || saving) ? (t(formErrors.compareAtPrice) ?? formErrors.compareAtPrice) : undefined}
             hint={L('compareHint', 'The old price, if this piece is on sale.', 'السعر القديم، لو القطعة عليها خصم.')} />
         </div>
         {/* The number the storefront will actually show, before it is saved. */}
@@ -244,9 +281,13 @@ export default function ProductEditor({ productId, copyFrom, categories, L, onCl
         )}
         <div className="pa-editor__row">
           <Field id="e-material" label={`${t('material')} (${t('optional')})`} value={material}
-            onChange={(e) => setMaterial(e.target.value)} />
+            onChange={(e) => setMaterial(e.target.value)}
+            onBlur={() => setTouched((prev) => ({ ...prev, material: true }))}
+            error={formErrors.material && (touched.material || saving) ? (t(formErrors.material) ?? formErrors.material) : undefined} />
           <Field id="e-care" label={`${t('care')} (${t('optional')})`} value={care}
             onChange={(e) => setCare(e.target.value)}
+            onBlur={() => setTouched((prev) => ({ ...prev, care: true }))}
+            error={formErrors.care && (touched.care || saving) ? (t(formErrors.care) ?? formErrors.care) : undefined}
             hint={L('careHint', 'Comma separated, e.g. machine wash cold, do not bleach', 'مفصولة بفاصلة')} />
         </div>
         <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
@@ -274,7 +315,7 @@ export default function ProductEditor({ productId, copyFrom, categories, L, onCl
           ))}
           <ColorAdder onAdd={(c) => setColors((prev) => [...prev, c])} taken={colors.map((c) => c.id)} L={L} />
         </div>
-        {formErrors.colors && <div className="pa-error">{formErrors.colors}</div>}
+        {(formErrors.colors && (touched.colors || saving)) && <div className="pa-error">{t(formErrors.colors) ?? formErrors.colors}</div>}
       </section>
 
       <section className="pa-editor__section">
@@ -282,12 +323,17 @@ export default function ProductEditor({ productId, copyFrom, categories, L, onCl
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {SIZE_OPTIONS.map((s) => (
             <button key={s} type="button" className="pa-size" aria-pressed={sizes.includes(s)}
-              onClick={() => setSizes((prev) => (prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]))}>
+              onClick={() => setSizes((prev) => {
+                const next = prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]
+                // Keep sizes in canonical order
+                return next.sort((a, b) => SIZE_OPTIONS.indexOf(a) - SIZE_OPTIONS.indexOf(b))
+              })}
+              onBlur={() => setTouched((prev) => ({ ...prev, sizes: true }))}>
               {s}
             </button>
           ))}
         </div>
-        {formErrors.sizes && <div className="pa-error">{formErrors.sizes}</div>}
+        {(formErrors.sizes && (touched.sizes || saving)) && <div className="pa-error">{t(formErrors.sizes) ?? formErrors.sizes}</div>}
       </section>
 
       <section className="pa-editor__section">
@@ -319,7 +365,7 @@ export default function ProductEditor({ productId, copyFrom, categories, L, onCl
           {images.map((img, i) => (
             <div key={img.url ?? i} className={`pa-phototile ${img.primary ? 'is-primary' : ''}`}>
               <img src={thumb(img.url, 200)} alt="" loading="lazy" />
-              <span className="pa-phototile__dot" style={{ '--sw': colors.find((c) => c.id === img.color)?.hex }} />
+              <span className="pa-phototile__dot" style={{ '--sw': colors.find((c) => c.id === img.color)?.hex ?? '#121212' }} />
               <button type="button" className="pa-phototile__primary" aria-pressed={!!img.primary}
                 aria-label={`${t('primaryPhoto')} ${i + 1}`}
                 onClick={() => setImages((prev) => prev.map((x, j) => ({ ...x, primary: j === i })))}>
@@ -352,7 +398,7 @@ export default function ProductEditor({ productId, copyFrom, categories, L, onCl
             }}
           />
         </div>
-        {formErrors.images && <div className="pa-error">{formErrors.images}</div>}
+        {(formErrors.images && (touched.images || saving)) && <div className="pa-error">{t(formErrors.images) ?? formErrors.images}</div>}
       </section>
     </EditorShell>
   )

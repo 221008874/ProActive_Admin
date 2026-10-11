@@ -9,7 +9,7 @@
 // routes — that is what the previous shell got wrong: the props were never
 // passed to it, so the sidebar could not move at all.
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { NavLink, Navigate, Outlet, useLocation } from 'react-router-dom'
 import { signOut } from 'firebase/auth'
 import { collection, getDocs, query, where } from 'firebase/firestore'
@@ -107,6 +107,15 @@ export function AdminLayout() {
   const { t } = useLanguage()
   const { badges, failed } = useNavBadges()
   const [offline, setOffline] = useState(!navigator.onLine)
+  const location = useLocation()
+
+  // Determine active nav key from current pathname
+  const active = useMemo(() => {
+    const path = location.pathname
+    // Path format: /dashboard/overview, /dashboard/products, etc.
+    const segments = path.split('/').filter(Boolean)
+    return segments[1] || 'overview'
+  }, [location.pathname])
 
   useEffect(() => {
     const sync = () => setOffline(!navigator.onLine)
@@ -132,6 +141,7 @@ export function AdminLayout() {
     <AdminShell
       items={items}
       phoneItems={phoneItems}
+      active={active}
       email={currentUser?.email}
       onSignOut={() => signOut(auth)}
       labels={{ signOut: t('signOut'), brand: t('admin') }}
