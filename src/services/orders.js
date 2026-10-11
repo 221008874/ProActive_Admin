@@ -87,10 +87,24 @@ export async function cancelOrder(orderId, newStatus = "cancelled") {
   });
 }
 
-export async function fetchOrdersByStatus(status, { limit } = {}) {
-  let q = query(collection(db, "orders_egp"), where("status", "==", status), orderBy("createdAt", "desc"));
-  if (limit) q = query(q, orderBy("createdAt", "desc"));
-  const snap = await getDocs(q);
+/**
+ * Orders with one status, newest first. `status` accepts an array so the
+ * "cancelled and returned" tab can be one read rather than two.
+ */
+export async function fetchOrdersByStatus(status) {
+  const where_ = Array.isArray(status) ? where("status", "in", status) : where("status", "==", status);
+  const snap = await getDocs(
+    query(collection(db, "orders_egp"), where_, orderBy("createdAt", "desc"))
+  );
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+/**
+ * Every order, newest first. Used for the status-tab counts, so a count can
+ * never disagree with the rows behind it: both come from the same read.
+ */
+export async function fetchOrders() {
+  const snap = await getDocs(query(collection(db, "orders_egp"), orderBy("createdAt", "desc")));
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
 

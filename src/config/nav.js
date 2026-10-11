@@ -9,6 +9,7 @@ export const NAV = [
   { key: 'overview', labelKey: 'overview' },
   { key: 'products', labelKey: 'products' },
   { key: 'orders', labelKey: 'orders', badge: 'pendingOrders', badgeTone: 'sale' },
+  { key: 'bills', labelKey: 'bills' },
   { key: 'categories', labelKey: 'categoriesAndCollections' },
   { key: 'coupons', labelKey: 'coupons' },
   { key: 'operations', labelKey: 'operations' },
