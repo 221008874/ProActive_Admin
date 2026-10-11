@@ -37,7 +37,13 @@ if (missingEnvKeys.length > 0) {
 
 const app = initializeApp(firebaseConfig)
 export const auth = getAuth(app)
-export const db = getFirestore(app)
+
+// This project's Firestore database is named "default", not the "(default)"
+// the SDK assumes. getFirestore(app) would point at "(default)" and every read
+// would fail with NOT_FOUND, which shows up as an empty table rather than an
+// error. Overridable so another project can be pointed at without a code change.
+export const DATABASE_ID = env.VITE_FIRESTORE_DATABASE_ID || 'default'
+export const db = getFirestore(app, DATABASE_ID)
 
 // Set auth persistence to LOCAL (survives page refresh)
 setPersistence(auth, browserLocalPersistence).catch(console.error)

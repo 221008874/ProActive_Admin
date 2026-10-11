@@ -10,7 +10,14 @@
 // token, which is cached until refresh.
 
 import fs from "node:fs";
-import * as admin from "firebase-admin";
+// The ESM subpath entries, not `import * as admin from "firebase-admin"`.
+// On firebase-admin 13 the root export is CommonJS with no "import"
+// condition, so its namespace exposes only `default` and admin.auth() is
+// undefined; on 14 the namespaces hang off lazy getters that are undefined
+// before an app exists. firebase-admin/app and firebase-admin/auth are real
+// ESM builds on both and resolve properly.
+import { initializeApp, cert } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 
 const email = process.argv[2];
 const revoke = process.argv.includes("--revoke");
@@ -26,11 +33,12 @@ if (!keyPath || !fs.existsSync(keyPath)) {
   process.exit(1);
 }
 
-admin.initializeApp({ credential: admin.credential.cert(JSON.parse(fs.readFileSync(keyPath, "utf8"))) });
+initializeApp({ credential: cert(JSON.parse(fs.readFileSync(keyPath, "utf8"))) });
+const auth = getAuth();
 
 let user;
 try {
-  user = await admin.auth().getUserByEmail(email);
+  user = await auth.getUserByEmail(email);
 } catch (e) {
   console.error(`No auth user with email ${email}. Create one in the Firebase console first.`);
   process.exit(1);
@@ -40,7 +48,7 @@ const existing = user.customClaims ?? {};
 console.log(`uid=${user.uid}  existing claims=${JSON.stringify(existing)}`);
 
 const claims = revoke ? { ...existing, admin: false } : { ...existing, admin: true };
-await admin.auth().setCustomUserClaims(user.uid, claims);
+await auth.setCustomUserClaims(user.uid, claims);
 
 console.log(`${revoke ? "revoked" : "granted"} admin claim for ${email} (${user.uid})`);
 console.log("Ask them to sign out and sign in again for the token to refresh.");
