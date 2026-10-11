@@ -3,31 +3,47 @@ import { loc, stockLevel } from "./format";
 
 /**
  * Admin layout: black sidebar on desktop, bottom bar on phones, content on the right.
- * items: [{ key, label, href, badge?, badgeTone? }]   e.g. Orders 12, Low stock 5 (badgeTone: "low")
- * onNavigate: optional (key) => void. When given, an item's click selects it in
- * app state instead of following href — the nav is a router-less tab set.
+ *
+ * items:      [{ key, label, href, badge?, badgeTone? }] — the full sidebar.
+ * phoneItems: [{ key, label, href, Icon }] — the four tabs shown on a phone.
+ *             When given, CSS folds the sidebar into this bar below 768px.
+ * active/badges are supplied by the caller, but an item rendered as a router
+ * NavLink sets aria-current itself, so `active` is only a fallback.
  */
-export function AdminShell({ items, active, email, onSignOut, children, as: Tag = "a", onNavigate }) {
+export function AdminShell({ items, phoneItems, active, email, onSignOut, children, labels = {} }) {
   return (
     <div className="pa-shell">
       <aside className="pa-side">
-        <div className="pa-side__brand"><div className="pa-logo">PROACTIVE</div><small>Admin</small></div>
-        {items.map((it) => {
-          const p = Tag === "a" ? { href: it.href } : { to: it.href };
-          const onClick = onNavigate
-            ? (e) => { e.preventDefault(); onNavigate(it.key); }
-            : undefined;
-          return (
-            <Tag key={it.key} aria-current={active === it.key ? "page" : undefined} onClick={onClick} {...p}>
-              {it.label}<Count n={it.badge} tone={it.badgeTone} large />
-            </Tag>
-          );
-        })}
+        <div className="pa-side__brand">
+          <div className="pa-logo">PROACTIVE</div>
+          <small>{labels.brand ?? "Admin"}</small>
+        </div>
+        {items.map((it) => (
+          <a key={it.key} href={it.href} aria-current={active === it.key ? "page" : undefined}>
+            {it.label}
+            {it.badge ? <Count n={it.badge} tone={it.badgeTone} large /> : null}
+          </a>
+        ))}
         <div className="pa-side__foot">
-          <div style={{ fontSize: 12, color: "var(--pa-on-dark-2)" }}>{email}</div>
-          <a href="#signout" onClick={(e) => { e.preventDefault(); onSignOut?.(); }} style={{ padding: 0, height: "auto", color: "#fff", fontWeight: 700 }}>Sign out</a>
+          <div className="pa-side__email" title={email ?? ""}>{email}</div>
+          <a href="#signout" onClick={(e) => { e.preventDefault(); onSignOut?.(); }}>
+            {labels.signOut ?? "Sign out"}
+          </a>
         </div>
       </aside>
+
+      {/* Phone: the same nav, four items, fixed to the bottom. */}
+      {phoneItems?.length > 0 && (
+        <nav className="pa-side__phone" aria-label="Sections">
+          {phoneItems.map((it) => (
+            <a key={it.key} href={it.href} aria-current={active === it.key ? "page" : undefined}>
+              {it.Icon ? <it.Icon width={22} height={22} /> : null}
+              <span>{it.label}</span>
+            </a>
+          ))}
+        </nav>
+      )}
+
       <main className="pa-content">{children}</main>
     </div>
   );

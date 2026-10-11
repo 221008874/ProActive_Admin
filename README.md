@@ -20,6 +20,8 @@ EGP additionally owns operational data: `egp_governorate_costs`, `egp_settings/g
 
 - **Products** — add / edit / delete, Cloudinary image upload, cross-store product sync
 - **Orders** — pending orders awaiting payment confirmation
+- **Bills** — every order's generated tax invoice (archived by the store app at
+  checkout): view inline, download, regenerate failed ones
 - **Confirmed** — admin-confirmed orders, filterable by date
 - **EGP only** — coupon management with printable PDF/QR export, per-governorate
   shipping costs (27 governorates), minimum order amount
@@ -47,6 +49,11 @@ npm run lint     # eslint
 - `src/services/firebase.js` — Firebase web config, `auth` and `db` singletons,
   local auth persistence
 - `src/services/cloudinary.js` — Cloudinary cloud name + unsigned upload preset
+- `src/services/storeApi.js` — base URL of the store deployment
+  (`VITE_STORE_API_BASE`, see `.env.example`); every call attaches a fresh
+  Firebase ID token. Used only by the Bills tab: the archived invoices are
+  bytes in a private GitHub repository on the store side, so this panel never
+  sees the store's credentials, only the authenticated responses
 
 > Both configs are client-side. Access control is enforced by Firestore security rules,
 > which live in the Firebase console, not in this repository.

@@ -39,12 +39,23 @@ const { MemoryRouter } = await import('react-router-dom')
 const React = (await import('react')).default
 const { renderToString } = await import('react-dom/server')
 const { default: SignIn } = await import('../pages/SignIn.jsx')
+const { LanguageProvider } = await import('../context/LanguageContext.jsx')
 const { AdminShell } = await import('../ui/index.js')
 
-it('the sign-in page renders design-system markup', () => {
-  const html = renderToString(
-    React.createElement(MemoryRouter, { initialEntries: ['/login'] }, React.createElement(SignIn))
+// SignIn reads the language context (its labels and its toggle are translated),
+// so it renders inside the real provider rather than a stub — that also proves
+// the provider itself boots without a browser.
+const renderSignIn = () =>
+  renderToString(
+    React.createElement(
+      MemoryRouter,
+      { initialEntries: ['/login'] },
+      React.createElement(LanguageProvider, null, React.createElement(SignIn))
+    )
   )
+
+it('the sign-in page renders design-system markup', () => {
+  const html = renderSignIn()
   const pa = (html.match(/class="[^"]*pa-/g) || []).length
   console.log(`sign-in: ${html.length} bytes, ${pa} .pa-* nodes`)
   expect(pa).toBeGreaterThan(0)
@@ -65,7 +76,8 @@ it('the admin shell renders its sidebar, nav, email and sign-out', () => {
         active: 'products',
         email: 'admin@example.com',
         onSignOut() {},
-        onNavigate() {}
+        onNavigate() {},
+        labels: { signOut: 'Sign out', brand: 'Admin' }
       },
       React.createElement('div', { className: 'pa-content' }, 'body')
     )
@@ -77,5 +89,30 @@ it('the admin shell renders its sidebar, nav, email and sign-out', () => {
   expect(shell).toContain('Sign out')
   expect(shell).toContain('pa-count')
   expect(shell).toContain('aria-current="page"')
+})
+
+it('renders in English by default and offers the Arabic toggle', () => {
+  // The admin defaults to English (the storefront defaults to Arabic): this is
+  // the owner's tool, and Arabic is opt-in via the toggle.
+  const html = renderSignIn()
+  expect(html).toContain('Sign in')
+  expect(html).toContain('Enter your credentials to access the dashboard')
+  expect(html).toContain('العربية') // the toggle offers the other language
+})
+
+it('renders in Arabic when the saved language is Arabic', () => {
+  // Prove the Arabic dictionary resolves rather than falling back to the key,
+  // which is the failure mode t(k) !== k guards against.
+  const original = window.localStorage.getItem
+  window.localStorage.getItem = (key) => (key === 'language' ? 'ar' : original(key))
+  try {
+    const html = renderSignIn()
+    expect(html).toContain('تسجيل الدخول')
+    expect(html).toContain('البريد الإلكتروني')
+    expect(html).toContain('English') // the toggle now offers the other language
+    expect(html).not.toContain('>signInTitle<')
+  } finally {
+    window.localStorage.getItem = original
+  }
 })
 

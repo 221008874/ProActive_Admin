@@ -9,9 +9,12 @@ import {
   getDocs,
   getDoc,
   runTransaction,
-  increment
+  increment,
+  query,
+  orderBy
 } from "firebase/firestore";
 import { db } from "../services/firebase";
+import { loc } from "../ui/format";
 import {
   variantIdFor,
   computeDenorm,
@@ -124,6 +127,63 @@ export async function archiveProduct(id) {
     updatedAt: serverTimestamp()
   });
 }
+
+/**
+ * Every product, for the admin table. Not filtered by status: the owner needs
+ * to see drafts and archived items to manage them, and the table filters
+ * client-side.
+ */
+export async function fetchAllProducts() {
+  const snap = await getDocs(
+    query(collection(db, "products_egp"), orderBy("createdAt", "desc"))
+  );
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+/**
+ * Save a product and its stock grid in one step.
+ *
+ * Takes the editor's shape rather than the storage shape, so the caller does
+ * not have to know how variants are keyed or denormalised. Validation runs
+ * first and throws with a field map, so the panel can point at the field.
+ */
+export async function saveProductWithStock({ product, stock }) {
+  const { id, colors, sizes, ...rest } = product;
+
+  const variants = (colors ?? []).flatMap((c) =>
+    (sizes ?? []).map((s) => ({
+      colorId: c.id,
+      color: loc(c.name, "en") || c.id,
+      size: s,
+      stock: Number(stock?.[`${c.id}_${s}`] ?? 0),
+      priceOverride: null,
+      active: true
+    }))
+  );
+
+  const data = {
+    ...rest,
+    // An empty slug is generated from the English title, because the storefront
+    // resolves /product/<slug> and two products cannot share one.
+    slug: (rest.slug || slugify(loc(rest.title, "en"))).toLowerCase(),
+    title: rest.title,
+    price: Number(rest.price),
+    compareAtPrice: rest.compareAtPrice == null ? null : Number(rest.compareAtPrice),
+    categoryId: rest.categoryId || null
+  };
+
+  return saveProduct(id, data, variants);
+}
+
+export function slugify(text) {
+  return String(text ?? "")
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+export { loc };
 
 export async function fetchLowStock(max = 2) {
   const snap = await getDocs(collection(db, "variants"));

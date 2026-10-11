@@ -36,4 +36,14 @@ export default defineConfig([
       'react-refresh/only-export-components': 'off',
     },
   },
+  // React contexts export the Provider component AND its hook from the same
+  // module - the documented React pattern. The fast-refresh rule is written for
+  // component libraries, not for context modules, and disabling it here keeps
+  // the standard pattern without splitting each context into two files.
+  {
+    files: ['src/context/**/*.{js,jsx}'],
+    rules: {
+      'react-refresh/only-export-components': 'off',
+    },
+  },
 ])
