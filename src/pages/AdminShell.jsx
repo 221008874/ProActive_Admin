@@ -17,7 +17,7 @@ import { auth, db } from '../services/firebase'
 import { useAuth } from '../context/AuthContext'
 import { useLanguage } from '../context/LanguageContext'
 import { AdminShell, OfflineBanner } from '../ui'
-import { NAV, PHONE_TABS } from '../config/nav'
+import { NAV, PHONE_TABS, hrefFor } from '../config/nav'
 import { IconBag, IconMenu, IconPlus, IconShop } from '../ui'
 
 /** Badges for the sidebar: pending orders and low-stock variants. */
@@ -118,7 +118,7 @@ export function AdminLayout() {
   const items = NAV.map((n) => ({
     ...n,
     label: t(n.labelKey),
-    href: `/dashboard/${n.key}`,
+    href: hrefFor(n),
     badge: n.badge ? badges[n.badge] : undefined
   }))
 
@@ -158,7 +158,7 @@ export function MorePage() {
       <h1 style={{ fontSize: 24, marginBottom: 16 }}>{t('more')}</h1>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {hidden.map((n) => (
-          <NavLink key={n.key} to={`/dashboard/${n.key}`} className="pa-drawer__row">
+          <NavLink key={n.key} to={hrefFor(n)} className="pa-drawer__row">
             {t(n.labelKey)}
           </NavLink>
         ))}

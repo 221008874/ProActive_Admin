@@ -272,6 +272,15 @@ export const ar = {
   care: 'العناية',
   slug: 'الرابط',
   remove: 'إزالة',
+
+  // Catalogue publishing: the manual rebuild the owner runs after editing a
+  // product, alongside the scheduled cron that does the same work.
+  catalogue: 'الكتالوج',
+  catalogueExplain: 'المتجر بيقرأ نسخة جاهزة من الكتالوج. اعمل تحديث بعد إضافة أو تعديل منتج عشان المتجر يظهر التغيير فوراً.',
+  publishChanges: 'انشر التغييرات',
+  publishing: 'جاري النشر…',
+  published: 'الكتالوج اتنشر (نسخة {version}، {count} منتج)',
+  apiNotConfigured: 'رابط متجر الـ API مش مضبوط.',
 }
 
 export const en = {
@@ -534,4 +543,13 @@ export const en = {
   care: 'Care',
   slug: 'URL slug',
   remove: 'Remove',
+
+  // Catalogue publishing: the manual rebuild the owner runs after editing a
+  // product, alongside the scheduled cron that does the same work.
+  catalogue: 'Catalogue',
+  catalogueExplain: 'The shop reads a pre-built catalogue. Rebuild it after adding or editing a product so the storefront shows the change immediately.',
+  publishChanges: 'Publish changes',
+  publishing: 'Publishing…',
+  published: 'Catalogue published (v{version}, {count} products)',
+  apiNotConfigured: 'The store API URL is not configured.',
 }

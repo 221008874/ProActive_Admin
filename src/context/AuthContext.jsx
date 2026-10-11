@@ -12,7 +12,10 @@ import { createContext, useContext, useEffect, useState } from 'react'
 import { auth } from '../services/firebase'
 import { onAuthStateChanged } from 'firebase/auth'
 
-const AuthContext = createContext()
+// Exported so a test can render the app's routes against a known session: the
+// provider reads the admin claim asynchronously and renders nothing until it
+// settles, which is right for the app and blocks a synchronous render.
+export const AuthContext = createContext()
 
 // Three states, not two: an unknown claim (still deciding) is not the same as a
 // false one, and rendering "not authorised" while the token is still loading

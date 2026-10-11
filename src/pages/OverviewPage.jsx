@@ -10,6 +10,11 @@ import { collection, getDocs, orderBy, query, where } from 'firebase/firestore'
 import { db } from '../services/firebase'
 import { Button, EmptyState, ErrorState, PageTitle, Skeleton, StatusPill, formatEGP } from '../ui'
 import { useLanguage } from '../context/LanguageContext'
+import { NAV, hrefFor } from '../config/nav'
+
+// Section links go through the nav table rather than a literal path: the same
+// mismatch that sent "Low stock" to the login screen started as a hardcoded URL.
+const hrefForKey = (key) => hrefFor(NAV.find((n) => n.key === key))
 
 const label = (t, lang) => (key, en, ar) => {
   if (key) {
@@ -94,14 +99,14 @@ export default function OverviewPage() {
       {!loading && !error && stats && (
         <>
           <div className="pa-statgrid">
-            <StatCard label={t('pendingOrders')} value={String(stats.pending)} to="/dashboard/orders" />
+            <StatCard label={t('pendingOrders')} value={String(stats.pending)} to={hrefForKey('orders')} />
             <StatCard label={t('todaysTotal')} value={formatEGP(stats.todaysTotal, lang)} />
-            <StatCard label={t('lowStockVariants')} value={String(stats.low)} to="/dashboard/low-stock" />
+            <StatCard label={t('lowStockVariants')} value={String(stats.low)} to={hrefForKey('lowStock')} />
           </div>
 
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 16 }}>
-            <Button as={Link} href="/dashboard/orders">{t('goToOrders')}</Button>
-            <Button as={Link} variant="outline" href="/dashboard/low-stock">{t('goToLowStock')}</Button>
+            <Button as={Link} href={hrefForKey('orders')}>{t('goToOrders')}</Button>
+            <Button as={Link} variant="outline" href={hrefForKey('lowStock')}>{t('goToLowStock')}</Button>
           </div>
 
           <section style={{ marginTop: 28 }}>

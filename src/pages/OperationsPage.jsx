@@ -14,6 +14,7 @@ import {
 } from '../ui'
 import { useLanguage } from '../context/LanguageContext'
 import { useToast } from '../ui/overlays'
+import { rebuildCatalog } from '../services/catalog'
 import { loc } from '../ui'
 import {
   fetchGovernorates, saveGovernorate, ensureGovernorates,
@@ -99,6 +100,23 @@ export default function OperationsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [reload, setReload] = useState(0)
+  const [publishing, setPublishing] = useState(false)
+
+  const publishCatalog = async () => {
+    setPublishing(true)
+    try {
+      const result = await rebuildCatalog()
+      toast.show(L('published', `Catalogue published (v${result.version}, ${result.productCount} products)`,
+        `الكتالوج اتنشر (نسخة ${result.version}، ${result.productCount} منتج)`))
+    } catch (e) {
+      console.error('Could not rebuild the catalogue:', e)
+      toast.show(e?.code === 'STORE_API_NOT_CONFIGURED'
+        ? L('apiNotConfigured', 'The store API URL is not configured.', 'رابط متجر الـ API مش مضبوط.')
+        : e?.message ?? t('error'))
+    } finally {
+      setPublishing(false)
+    }
+  }
 
 
   const load = useCallback(async () => {
@@ -166,6 +184,26 @@ export default function OperationsPage() {
 
       {!loading && !error && settings && (
         <>
+          {/* Publishing is on demand, not only on the 04:00 schedule: after
+              editing a product the shop keeps serving the old snapshot until
+              something rebuilds it, and a wrong price reaching a customer is
+              not something to discover the next morning. */}
+          <section className="pa-block" style={{ border: '1px solid var(--pa-ink)', marginBottom: 24 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+              <div>
+                <h2 style={{ fontSize: 18 }}>{t('catalogue')}</h2>
+                <p className="pa-subtitle" style={{ maxWidth: 560 }}>
+                  {L('catalogueExplain',
+                    'The shop reads a pre-built catalogue. Rebuild it after adding or editing a product so the storefront shows the change immediately.',
+                    'المتجر بيقرأ نسخة جاهزة من الكتالوج. اعمل تحديث بعد إضافة أو تعديل منتج عشان المتجر يظهر التغيير فوراً.')}
+                </p>
+              </div>
+              <Button onClick={publishCatalog} disabled={publishing}>
+                {publishing ? t('publishing') : t('publishChanges')}
+              </Button>
+            </div>
+          </section>
+
           <section className="pa-block" style={{ border: '1px solid var(--pa-ink)' }}>
             <h2 style={{ fontSize: 18, marginBottom: 10 }}>{t('storeSettings')}</h2>
             <div className="pa-editor__row">

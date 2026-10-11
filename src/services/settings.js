@@ -9,7 +9,7 @@
 import {
   collection,
   doc,
-  FieldPath,
+  documentId,
   getDoc,
   getDocs,
   orderBy,
@@ -43,7 +43,7 @@ export async function saveSettings(patch) {
 // documents written before it existed, and an orderBy on a missing field drops
 // the whole row from the result.
 const allGovernorates = () =>
-  query(collection(db, 'egp_governorate_costs'), orderBy(FieldPath.documentId()))
+  query(collection(db, 'egp_governorate_costs'), orderBy(documentId()))
 
 export async function fetchGovernorates() {
   const snap = await getDocs(allGovernorates())
