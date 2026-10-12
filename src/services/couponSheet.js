@@ -14,7 +14,7 @@
 import { jsPDF } from 'jspdf'
 import QRCode from 'qrcode'
 import * as ArabicReshaperModule from 'arabic-reshaper'
-import { getEmbeddingLevels, getReorderedString } from 'bidi-js/dist/bidi.js'
+import * as bidiModule from 'bidi-js'
 
 // arabic-reshaper is a 2013 UMD bundle that assigns its object to
 // `module.exports`, so depending on the bundler the ESM default import can be
@@ -24,6 +24,25 @@ import { getEmbeddingLevels, getReorderedString } from 'bidi-js/dist/bidi.js'
 const ArabicReshaper = ArabicReshaperModule?.convertArabic
   ? ArabicReshaperModule
   : ArabicReshaperModule?.default
+
+// bidi-js ships two builds: a UMD CommonJS one (package "main") and an ESM one
+// (package "module"). BOTH export a *factory function* — the Unicode tables are
+// built inside it, and only calling it returns the API object.
+//
+// The old code named-imported `getEmbeddingLevels` / `getReorderedString` from
+// the UMD file directly. No bundler can resolve those statically: the export is
+// a property of the factory's RETURN value, not of module.exports, so rolldown
+// emitted a runtime namespace lookup on the factory itself and every Arabic
+// coupon print died with "(0, mN.getEmbeddingLevels) is not a function". The
+// unit tests never caught it because they only grepped the source text.
+//
+// Resolve the factory once here — tolerating either interop shape (namespace
+// wrapper, or the factory assigned to module.exports directly) — and call it.
+const bidiFactory = bidiModule?.default ?? bidiModule
+const bidi = typeof bidiFactory === 'function' ? bidiFactory() : bidiFactory
+const bidiReady =
+  typeof bidi?.getEmbeddingLevels === 'function' &&
+  typeof bidi?.getReorderedString === 'function'
 
 const A4 = { w: 210, h: 297 }
 const COLS = 2
@@ -52,6 +71,11 @@ async function ensureArabicFont(pdf) {
       fetch('/fonts/ibm-plex-sans-arabic-regular.ttf'),
       fetch('/fonts/ibm-plex-sans-arabic-bold.ttf')
     ])
+    // Diagnose a bad response instead of base64-ing the error page: addFont on
+    // non-TTF bytes throws much later and far from the cause.
+    for (const [res, style] of [[regularRes, 'regular'], [boldRes, 'bold']]) {
+      if (!res.ok) throw new Error(`HTTP ${res.status} for the ${style} font`)
+    }
     const [regularBuf, boldBuf] = await Promise.all([
       regularRes.arrayBuffer(),
       boldRes.arrayBuffer()
@@ -62,9 +86,9 @@ async function ensureArabicFont(pdf) {
     pdf.addFileToVFS('PlexAr-Bold.ttf', toB64(boldBuf))
     pdf.addFont('PlexAr-Bold.ttf', 'PlexAr', 'bold')
     arabicFontLoaded = true
-  } catch {
+  } catch (e) {
     // Fallback: font loading failed, Arabic will use default font (may not render correctly)
-    console.warn('Could not load Arabic font for PDF')
+    console.warn(`Could not load Arabic font for PDF: ${e?.message ?? e}`)
   }
 }
 
@@ -72,18 +96,18 @@ async function ensureArabicFont(pdf) {
  * Shape Arabic text for RTL display in jsPDF.
  * Codes, numbers, EGP, and Latin text remain LTR.
  */
-function shapeArabic(str, lang) {
+export function shapeArabic(str, lang) {
   if (lang !== 'ar') return str
-  if (typeof ArabicReshaper?.convertArabic !== 'function') {
-    // Without the shaper the PDF still renders, just with disconnected Arabic
-    // letters. A coupon sheet with wrong glyphs beats no coupon sheet.
-    console.warn('arabic-reshaper unavailable; Arabic will not be shaped correctly')
+  // Degrade to unshaped text rather than throw: the print path is not
+  // recoverable, and a coupon sheet with disconnected letters still carries
+  // the code and the discount.
+  if (typeof ArabicReshaper?.convertArabic !== 'function' || !bidiReady) {
+    console.warn('Arabic shaping unavailable; the PDF will print unshaped Arabic')
     return str
   }
   // convertArabic joins letters; bidi-js handles RTL ordering.
   const reshaped = ArabicReshaper.convertArabic(str)
-  const levels = getEmbeddingLevels(reshaped, { rtl: true })
-  return getReorderedString(reshaped, levels)
+  return bidi.getReorderedString(reshaped, bidi.getEmbeddingLevels(reshaped, { rtl: true }))
 }
 
 /**
