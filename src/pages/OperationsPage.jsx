@@ -8,7 +8,7 @@
 // tabs to the next, and the value is already stored. A "Saved" tick confirms
 // it and then fades, so a save that fails is noticed.
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   Button, ErrorState, Field, PageTitle, Skeleton
 } from '../ui'

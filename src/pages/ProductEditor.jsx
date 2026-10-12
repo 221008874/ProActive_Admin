@@ -16,12 +16,32 @@ import {
 import { useLanguage } from '../context/LanguageContext'
 import { useToast } from '../ui/overlays'
 import {
-  fetchProductForEdit, saveProductWithStock, archiveProduct, computeDiscountPct
+  fetchProductForEdit, saveProductWithStock, archiveProduct, computeDiscountPct, MAX_VARIANTS
 } from '../services/products'
 import { uploadImage } from '../services/cloudinary'
 
 // Canonical size order — "2XL" is an alias for "XXL" and is normalised on load/save.
 const SIZE_OPTIONS = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL']
+
+// The order the summary lists problems in: identity, then money, then the grid.
+// A field label per validation key, so the summary can say *where* to look
+// rather than only *what* is wrong.
+const ERROR_FIELDS = [
+  { key: 'title', label: { en: 'Name', ar: 'الاسم' } },
+  { key: 'slug', label: { en: 'Slug', ar: 'الرابط' } },
+  { key: 'categoryId', label: { en: 'Category', ar: 'القسم' } },
+  { key: 'price', label: { en: 'Price', ar: 'السعر' } },
+  { key: 'compareAtPrice', label: { en: 'Compare-at price', ar: 'السعر قبل الخصم' } },
+  { key: 'colors', label: { en: 'Colours', ar: 'الألوان' } },
+  { key: 'sizes', label: { en: 'Sizes', ar: 'المقاسات' } },
+  { key: 'variants', label: { en: 'Variants', ar: 'التراكيب' } },
+  { key: 'images', label: { en: 'Photos', ar: 'الصور' } }
+]
+
+/** Translate a service validation message, filling the `{max}` placeholder. */
+function translateError(t, message) {
+  return t(message, { max: MAX_VARIANTS })
+}
 
 /** Normalise legacy "2XL" → "XXL" in a size array. */
 function normaliseSizes(arr) {
@@ -44,6 +64,10 @@ export default function ProductEditor({ productId, copyFrom, categories, L, onCl
   // (setFormErrors in the catch and setSaving(false) in the finally are batched
   // together), so "Invalid product" appeared in the console and nowhere on screen.
   const [submitted, setSubmitted] = useState(false)
+  // The body is a long scroll container: a per-field error can sit far above the
+  // fold, so a failure the owner cannot see is a failure they cannot fix. This
+  // ref lets the summary banner be scrolled into view after a rejected save.
+  const bodyRef = useRef(null)
 
   const [title, setTitle] = useState({ ar: '', en: '' })
   const [description, setDescription] = useState({ ar: '', en: '' })
@@ -115,6 +139,16 @@ export default function ProductEditor({ productId, copyFrom, categories, L, onCl
     [stock]
   )
 
+  // Every validation message, paired with the label of the field it belongs to,
+  // in a stable order. Driven off formErrors so it can only ever say what the
+  // service actually rejected.
+  const summary = useMemo(
+    () => ERROR_FIELDS
+      .filter(({ key }) => formErrors[key])
+      .map(({ key, label }) => ({ key, label: loc(label, lang), message: translateError(t, formErrors[key]) })),
+    [formErrors, lang, t]
+  )
+
   const save = async () => {
     // Mark all fields as touched on save attempt so validation shows
     setTouched({
@@ -160,8 +194,20 @@ export default function ProductEditor({ productId, copyFrom, categories, L, onCl
       console.error('Could not save product:', e)
       // The service throws a validation error carrying a field map, so the
       // owner is told which field to fix rather than just that it failed.
-      if (e?.code === 'VALIDATION' && e.errors) setFormErrors(e.errors)
-      else setFormErrors({ _form: e?.message ?? String(e) })
+      if (e?.code === 'VALIDATION' && e.errors) {
+        setFormErrors(e.errors)
+        // The per-field messages are rendered where the fields are, which for a
+        // long form means off-screen. Surface the count in a toast so a failed
+        // save is never a console-only event, and pull the summary into view.
+        const count = Object.keys(e.errors).length
+        toast.show(
+          L('fixFields', 'Fix {count} field(s) to save this product.', 'ظبط {count} حقل عشان تحفظ المنتج.').replace('{count}', count),
+          { duration: 6000 }
+        )
+        requestAnimationFrame(() => bodyRef.current?.scrollTo({ top: 0, behavior: 'smooth' }))
+      } else {
+        setFormErrors({ _form: e?.message ?? String(e) })
+      }
     } finally {
       setSaving(false)
     }
@@ -209,6 +255,7 @@ return (
       title={productId ? t('editProduct') : t('addProduct')}
       L={L}
       onClose={onClose}
+      bodyRef={bodyRef}
       footer={
         <>
           {productId && (
@@ -225,22 +272,38 @@ return (
         <div className="pa-callout pa-callout--error" role="alert"><bdi className="pa-ltr">{formErrors._form}</bdi></div>
       )}
 
+      {/* Summary of everything the service rejected, in one block. The per-field
+          messages stay where the fields are; this is the one the owner is
+          guaranteed to see, because it sits at the top of the scroll area. */}
+      {submitted && summary.length > 0 && (
+        <div className="pa-callout pa-callout--error" role="alert">
+          <b>{L('cannotSaveYet', 'Cannot save yet', 'لسه مش قادر تحفظ')}</b>
+          <ul style={{ margin: '6px 0 0', paddingInlineStart: 18 }}>
+            {summary.map((s) => (
+              <li key={s.key}>
+                <b>{s.label}</b>{' — '}{s.message}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <section className="pa-editor__section">
         <div className="pa-editor__row">
           <Field id="e-title-en" label={t('nameEn')} value={title.en}
             onChange={(e) => setTitle((p) => ({ ...p, en: e.target.value }))}
             onBlur={() => setTouched((prev) => ({ ...prev, title: true }))}
-            error={formErrors.title && (touched.title || saving || submitted) ? (t(formErrors.title) ?? formErrors.title) : undefined} />
+            error={formErrors.title && (touched.title || saving || submitted) ? (translateError(t, formErrors.title)) : undefined} />
           <Field id="e-title-ar" label={t('nameAr')} value={title.ar} dir="rtl"
             onChange={(e) => setTitle((p) => ({ ...p, ar: e.target.value }))}
             onBlur={() => setTouched((prev) => ({ ...prev, title: true }))}
-            error={formErrors.title && (touched.title || saving || submitted) ? (t(formErrors.title) ?? formErrors.title) : undefined} />
+            error={formErrors.title && (touched.title || saving || submitted) ? (translateError(t, formErrors.title)) : undefined} />
         </div>
         <div className="pa-editor__row">
           <Field id="e-slug" label={`${t('slug')} (${t('optional')})`} value={slug}
             onChange={(e) => setSlug(e.target.value)}
             onBlur={() => setTouched((prev) => ({ ...prev, slug: true }))}
-            error={formErrors.slug && (touched.slug || saving || submitted) ? (t(formErrors.slug) ?? formErrors.slug) : undefined}
+            error={formErrors.slug && (touched.slug || saving || submitted) ? (translateError(t, formErrors.slug)) : undefined}
             hint={L('slugHint', 'Used in links. Generated from the English title when empty.', 'بيتستخدم في الروابط. بيتولد من الاسم الإنجليزي لو فاضي.')} />
           <Select id="e-status" label={t('status')} value={status} onChange={(e) => setStatus(e.target.value)}>
             <option value="active">{t('active')}</option>
@@ -251,7 +314,7 @@ return (
         <Select id="e-category" label={t('category')} value={categoryId}
           onChange={(e) => setCategoryId(e.target.value)}
           onBlur={() => setTouched((prev) => ({ ...prev, categoryId: true }))}
-          error={formErrors.categoryId && (touched.categoryId || saving || submitted) ? (t(formErrors.categoryId) ?? formErrors.categoryId) : undefined}>
+          error={formErrors.categoryId && (touched.categoryId || saving || submitted) ? (translateError(t, formErrors.categoryId)) : undefined}>
           <option value="">{L('noCategory', 'No category', 'بدون قسم')}</option>
           {categories.map((c) => (
             <option key={c.id} value={c.id}>{loc(c.name, lang)}</option>
@@ -260,11 +323,11 @@ return (
         <Field id="e-desc-en" label={`${t('description')} (EN)`} value={description.en}
           onChange={(e) => setDescription((p) => ({ ...p, en: e.target.value }))}
           onBlur={() => setTouched((prev) => ({ ...prev, description: true }))}
-          error={formErrors.description && (touched.description || saving || submitted) ? (t(formErrors.description) ?? formErrors.description) : undefined} />
+          error={formErrors.description && (touched.description || saving || submitted) ? (translateError(t, formErrors.description)) : undefined} />
         <Field id="e-desc-ar" label={`${t('description')} (AR)`} value={description.ar} dir="rtl"
           onChange={(e) => setDescription((p) => ({ ...p, ar: e.target.value }))}
           onBlur={() => setTouched((prev) => ({ ...prev, description: true }))}
-          error={formErrors.description && (touched.description || saving || submitted) ? (t(formErrors.description) ?? formErrors.description) : undefined} />
+          error={formErrors.description && (touched.description || saving || submitted) ? (translateError(t, formErrors.description)) : undefined} />
       </section>
 
       <section className="pa-editor__section">
@@ -272,11 +335,11 @@ return (
           <Field id="e-price" label={t('price')} type="number" min="0" step="0.01" value={price}
             onChange={(e) => setPrice(e.target.value)}
             onBlur={() => setTouched((prev) => ({ ...prev, price: true }))}
-            error={formErrors.price && (touched.price || saving || submitted) ? (t(formErrors.price) ?? formErrors.price) : undefined} />
+            error={formErrors.price && (touched.price || saving || submitted) ? (translateError(t, formErrors.price)) : undefined} />
           <Field id="e-compare" label={t('compareAtPrice')} type="number" min="0" step="0.01" value={compareAt}
             onChange={(e) => setCompareAt(e.target.value)}
             onBlur={() => setTouched((prev) => ({ ...prev, compareAt: true }))}
-            error={formErrors.compareAtPrice && (touched.compareAt || saving || submitted) ? (t(formErrors.compareAtPrice) ?? formErrors.compareAtPrice) : undefined}
+            error={formErrors.compareAtPrice && (touched.compareAt || saving || submitted) ? (translateError(t, formErrors.compareAtPrice)) : undefined}
             hint={L('compareHint', 'The old price, if this piece is on sale.', 'السعر القديم، لو القطعة عليها خصم.')} />
         </div>
         {/* The number the storefront will actually show, before it is saved. */}
@@ -290,11 +353,11 @@ return (
           <Field id="e-material" label={`${t('material')} (${t('optional')})`} value={material}
             onChange={(e) => setMaterial(e.target.value)}
             onBlur={() => setTouched((prev) => ({ ...prev, material: true }))}
-            error={formErrors.material && (touched.material || saving || submitted) ? (t(formErrors.material) ?? formErrors.material) : undefined} />
+            error={formErrors.material && (touched.material || saving || submitted) ? (translateError(t, formErrors.material)) : undefined} />
           <Field id="e-care" label={`${t('care')} (${t('optional')})`} value={care}
             onChange={(e) => setCare(e.target.value)}
             onBlur={() => setTouched((prev) => ({ ...prev, care: true }))}
-            error={formErrors.care && (touched.care || saving || submitted) ? (t(formErrors.care) ?? formErrors.care) : undefined}
+            error={formErrors.care && (touched.care || saving || submitted) ? (translateError(t, formErrors.care)) : undefined}
             hint={L('careHint', 'Comma separated, e.g. machine wash cold, do not bleach', 'مفصولة بفاصلة')} />
         </div>
         <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
@@ -322,7 +385,7 @@ return (
           ))}
           <ColorAdder onAdd={(c) => setColors((prev) => [...prev, c])} taken={colors.map((c) => c.id)} L={L} />
         </div>
-        {(formErrors.colors && (touched.colors || saving || submitted)) && <div className="pa-error">{t(formErrors.colors) ?? formErrors.colors}</div>}
+        {(formErrors.colors && (touched.colors || saving || submitted)) && <div className="pa-error">{translateError(t, formErrors.colors)}</div>}
       </section>
 
       <section className="pa-editor__section">
@@ -340,7 +403,7 @@ return (
             </button>
           ))}
         </div>
-        {(formErrors.sizes && (touched.sizes || saving || submitted)) && <div className="pa-error">{t(formErrors.sizes) ?? formErrors.sizes}</div>}
+        {(formErrors.sizes && (touched.sizes || saving || submitted)) && <div className="pa-error">{translateError(t, formErrors.sizes)}</div>}
       </section>
 
       <section className="pa-editor__section">
@@ -405,7 +468,7 @@ return (
             }}
           />
         </div>
-        {(formErrors.images && (touched.images || saving || submitted)) && <div className="pa-error">{t(formErrors.images) ?? formErrors.images}</div>}
+        {(formErrors.images && (touched.images || saving || submitted)) && <div className="pa-error">{translateError(t, formErrors.images)}</div>}
       </section>
 
       {/* The service can reject the whole form on the variant list ("add at least
@@ -413,7 +476,7 @@ return (
           the one validation error with no on-screen home at all. */}
       {formErrors.variants && (saving || submitted) && (
         <div className="pa-callout pa-callout--error" role="alert">
-          {t(formErrors.variants) ?? formErrors.variants}
+          {translateError(t, formErrors.variants)}
         </div>
       )}
     </EditorShell>
@@ -423,7 +486,7 @@ return (
 /* -------------------------------------------------------------------------- */
 
 /** The panel chrome: a sticky ink header, a scrolling body, a sticky footer. */
-function EditorShell({ title, L, onClose, footer, children }) {
+function EditorShell({ title, L, onClose, footer, bodyRef, children }) {
   return (
     <>
       <div className="pa-sheet-backdrop" onClick={onClose} />
@@ -435,7 +498,7 @@ function EditorShell({ title, L, onClose, footer, children }) {
             <IconClose width={22} height={22} />
           </button>
         </header>
-        <div className="pa-editor__body">{children}</div>
+        <div className="pa-editor__body" ref={bodyRef}>{children}</div>
         {footer && <footer className="pa-editor__foot">{footer}</footer>}
       </aside>
     </>

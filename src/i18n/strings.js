@@ -136,6 +136,10 @@ export const ar = {
   'Add at least one size': 'اختار مقاس واحد على الأقل',
   'Add at least one image': 'أضف صورة واحدة على الأقل',
   'Compare-at price must be greater than the price': 'السعر قبل الخصم لازم يكون أعلى من السعر الحالي',
+  'Add at least one variant': 'لازم تضيف تركيبة واحدة على الأقل (لون + مقاس)',
+  'Too many variants (max {max})': 'عدد التراكيب كتير (أقصى عدد {max})',
+  cannotSaveYet: 'لسه مش قادر تحفظ',
+  fixFields: 'ظبط {count} حقل عشان تقدر تحفظ المنتج',
 
   // Orders
   orderNumber: 'رقم الطلب',
@@ -214,7 +218,6 @@ export const ar = {
   deleteCouponConfirm: 'حذف الكود؟ مش هتقدر ترجعه.',
   editCoupon: 'تعديل الكود',
   actions: 'إجراءات',
-  edit: 'تعديل',
   couponUpdated: 'تم تحديث الكود',
 
   // Operations
@@ -432,6 +435,10 @@ export const en = {
   'Add at least one size': 'Choose at least one size',
   'Add at least one image': 'Add at least one photo',
   'Compare-at price must be greater than the price': 'Compare at must be higher than the price',
+  'Add at least one variant': 'Add at least one colour + size combination',
+  'Too many variants (max {max})': 'Too many combinations (max {max})',
+  cannotSaveYet: 'Cannot save yet',
+  fixFields: 'Fix {count} field(s) to save this product',
 
   // Orders
   orderNumber: 'Order no.',
@@ -510,7 +517,6 @@ export const en = {
   deleteCouponConfirm: 'Delete this code? It cannot be restored.',
   editCoupon: 'Edit coupon',
   actions: 'Actions',
-  edit: 'Edit',
   couponUpdated: 'Coupon updated',
 
   // Operations

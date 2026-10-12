@@ -13,8 +13,17 @@
 
 import { jsPDF } from 'jspdf'
 import QRCode from 'qrcode'
-import ArabicReshaper from 'arabic-reshaper'
+import * as ArabicReshaperModule from 'arabic-reshaper'
 import { getEmbeddingLevels, getReorderedString } from 'bidi-js/dist/bidi.js'
+
+// arabic-reshaper is a 2013 UMD bundle that assigns its object to
+// `module.exports`, so depending on the bundler the ESM default import can be
+// the exports object or a `{ default: exports }` namespace wrapper. Unwrap both,
+// because the alternative is a runtime TypeError on every printed coupon sheet.
+// (It also has no `reshape` — the method has always been `convertArabic`.)
+const ArabicReshaper = ArabicReshaperModule?.convertArabic
+  ? ArabicReshaperModule
+  : ArabicReshaperModule?.default
 
 const A4 = { w: 210, h: 297 }
 const COLS = 2
@@ -65,20 +74,16 @@ async function ensureArabicFont(pdf) {
  */
 function shapeArabic(str, lang) {
   if (lang !== 'ar') return str
-  // arabic-reshaper joins letters, bidi-js handles RTL ordering
-  const reshaped = ArabicReshaper.reshape(str)
+  if (typeof ArabicReshaper?.convertArabic !== 'function') {
+    // Without the shaper the PDF still renders, just with disconnected Arabic
+    // letters. A coupon sheet with wrong glyphs beats no coupon sheet.
+    console.warn('arabic-reshaper unavailable; Arabic will not be shaped correctly')
+    return str
+  }
+  // convertArabic joins letters; bidi-js handles RTL ordering.
+  const reshaped = ArabicReshaper.convertArabic(str)
   const levels = getEmbeddingLevels(reshaped, { rtl: true })
   return getReorderedString(reshaped, levels)
-}
-
-/**
- * Wrap text to fit within maxWidth (mm) at given font size.
- * Returns array of lines.
- */
-function wrapText(pdf, str, fontSize, maxWidth) {
-  pdf.setFontSize(fontSize)
-  const lines = pdf.splitTextToSize(str, maxWidth)
-  return Array.isArray(lines) ? lines : [lines]
 }
 
 /**

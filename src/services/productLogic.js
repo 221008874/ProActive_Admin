@@ -54,7 +54,9 @@ export function validateProduct(data = {}, variants = []) {
   if (!Array.isArray(data.images) || data.images.length === 0) errors.images = "Add at least one image";
   if (!Array.isArray(variants) || variants.length === 0) errors.variants = "Add at least one variant";
   if (Array.isArray(variants) && variants.length > MAX_VARIANTS) {
-    errors.variants = `Too many variants (max ${MAX_VARIANTS})`;
+    // A placeholder rather than an interpolated string, so the message stays a
+    // stable i18n key and the editor can fill `{max}` from MAX_VARIANTS.
+    errors.variants = "Too many variants (max {max})";
   }
 
   return { errors, isValid: Object.keys(errors).length === 0 };

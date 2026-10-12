@@ -122,7 +122,9 @@ describe('productLogic - validateProduct', () => {
 
   it('rejects an oversized variant grid', () => {
     const many = Array.from({ length: MAX_VARIANTS + 1 }, () => variants[0])
-    expect(validateProduct(ok, many).errors.variants).toContain(String(MAX_VARIANTS))
+    // The cap is left as a {max} placeholder so the message stays a translatable
+    // key; the editor fills it from MAX_VARIANTS via translateError.
+    expect(validateProduct(ok, many).errors.variants).toBe('Too many variants (max {max})')
   })
 })
 
