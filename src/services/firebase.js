@@ -74,18 +74,21 @@ if (useEmulator) {
 const app = initializeApp(firebaseConfig)
 export const auth = getAuth(app)
 
-// The Firestore database id.
+// The Firestore database id, and it differs by target.
 //
-// This must be '(default)' WITH the parentheses. Firestore's default database is
-// literally named "(default)", and passing 'default' instead silently addresses a
-// different, non-existent database rather than erroring: reads come back empty
-// and the panel just looks like it has no data. Against the emulator the symptom
-// is louder but equally confusing - the emulator logs
-// "could not infer db from headers" and the client gives up with "Could not reach
-// Cloud Firestore backend", then serves empty results from its offline cache.
+// The live project uses a NAMED database called "default" - without the
+// parentheses. Reading "(default)" against it fails with NOT_FOUND: no
+// collections, no orders, no catalogue, and because the error names no database
+// it reads like a permissions problem. The Store's server documents this too, at
+// server/_core/serverDb.js, and both must agree or the panel and the shop read
+// different databases.
 //
-// Overridable so another project can be pointed at without a code change.
-export const DATABASE_ID = env.VITE_FIRESTORE_DATABASE_ID || '(default)'
+// The emulator is the opposite: it only serves "(default)", which is also what
+// the seed scripts write. So the id is chosen by target rather than hardcoded.
+//
+// Overridable with VITE_FIRESTORE_DATABASE_ID for any other project.
+export const DATABASE_ID =
+  env.VITE_FIRESTORE_DATABASE_ID || (useEmulator ? '(default)' : 'default')
 export const db = getFirestore(app, DATABASE_ID)
 
 /**
