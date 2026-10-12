@@ -15,12 +15,16 @@ import {
   orderBy,
   query,
   serverTimestamp,
-  setDoc,
   writeBatch
 } from 'firebase/firestore'
 import { db } from './firebase'
+import { commitCatalogBatch } from './catalogDirty'
 
 const withId = (d) => ({ id: d.id, ...d.data() })
+
+// Both documents here are collected into the snapshot (see the Store's
+// collectCatalogData), and neither is a product, so both need a full rebuild.
+const FULL_REBUILD = { scope: 'full' }
 
 /* ------------------------------- general -------------------------------- */
 
@@ -32,7 +36,9 @@ export async function fetchSettings() {
 /** Merge a patch into egp_settings/general. Returns the document as saved. */
 export async function saveSettings(patch) {
   const ref = doc(db, 'egp_settings', 'general')
-  await setDoc(ref, { ...patch, updatedAt: serverTimestamp() }, { merge: true })
+  const batch = writeBatch(db)
+  batch.set(ref, { ...patch, updatedAt: serverTimestamp() }, { merge: true })
+  await commitCatalogBatch(batch, FULL_REBUILD)
   const snap = await getDoc(ref)
   return snap.data()
 }
@@ -59,7 +65,9 @@ export async function saveGovernorate(id, patch) {
     updatedAt: serverTimestamp()
   }
   if (patch.name) data.name = patch.name
-  await setDoc(ref, data, { merge: true })
+  const batch = writeBatch(db)
+  batch.set(ref, data, { merge: true })
+  await commitCatalogBatch(batch, FULL_REBUILD)
   const snap = await getDoc(ref)
   return snap.data()
 }
@@ -99,6 +107,8 @@ export async function ensureGovernorates(seed = []) {
     added++
   }
 
-  if (added > 0) await batch.commit()
+  if (added > 0) {
+    await commitCatalogBatch(batch, FULL_REBUILD)
+  }
   return added
 }

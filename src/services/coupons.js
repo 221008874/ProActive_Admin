@@ -1,13 +1,18 @@
 // Coupon writes for the admin panel.
 //
-// Coupon documents are keyed by the uppercased code, so redemption is a plain
-// getDoc instead of a query, and two people cannot generate the same code.
+ // Coupon documents are keyed by the uppercased code, so redemption is a plain
+ // getDoc instead of a query, and two people cannot generate the same code.
 
 import { doc, collection, writeBatch, serverTimestamp, getDocs, query, orderBy } from "firebase/firestore";
 import { db } from "../services/firebase";
 import { randomCode, normalizeCode, validateCoupon } from "./couponLogic";
 
 export { randomCode, normalizeCode, validateCoupon, couponLabel, MAX_PER_BATCH } from "./couponLogic";
+
+// NOTE: coupon documents are deliberately NOT part of the storefront catalog
+// snapshot (see Store server/_core/catalogCore.js collectCatalogData), so
+// coupon writes must not set egp_settings/catalog.dirty -- that would only
+// trigger a rebuild which cannot publish the change.
 
 // Returns the generated codes so the caller can feed them into the existing QR
 // + A4 PDF sheet export.

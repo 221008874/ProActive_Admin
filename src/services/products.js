@@ -15,6 +15,7 @@ import {
 } from "firebase/firestore";
 import { db } from "../services/firebase";
 import { loc } from "../ui/format";
+import { commitCatalogBatch, markCatalogDirty, scheduleCatalogRebuild } from "./catalogDirty";
 import {
   variantIdFor,
   computeDenorm,
@@ -78,7 +79,10 @@ export async function saveProduct(productId, data, variants) {
     });
   }
 
-  await batch.commit();
+  // The flag rides along in the same batch: if the tab dies between the product
+  // write and a second write, the shop must never be left stale silently.
+  await commitCatalogBatch(batch);
+
   return ref.id;
 }
 
@@ -101,14 +105,27 @@ export async function setVariantStock(productId, variantId, stock) {
       totalStock: increment(value - (variantSnap.data().stock ?? 0)),
       updatedAt: serverTimestamp()
     });
+
+    markCatalogDirty(tx);
   });
+
+  // A transaction cannot also schedule the publish, so it happens here.
+  scheduleCatalogRebuild();
 }
 
 // Restores the denormalised colour/size flags after cancellations or imports.
+// Those flags are baked into the snapshot's product cards, so the card has to be
+// repatched for the storefront to show the restored options.
 export async function recomputeProductFlags(productId) {
   const productRef = doc(db, "products_egp", productId);
   const snap = await getDocs(collection(productRef, "variants"));
-  await productRef.update({ ...computeDenorm(snap.docs.map((d) => ({ ...d.data(), id: d.id }))) });
+  const batch = writeBatch(db);
+  batch.set(
+    productRef,
+    { ...computeDenorm(snap.docs.map((d) => ({ ...d.data(), id: d.id }))) },
+    { merge: true }
+  );
+  await commitCatalogBatch(batch);
 }
 
 export async function fetchProductForEdit(id) {
@@ -122,10 +139,14 @@ export async function fetchProductForEdit(id) {
 
 // Soft delete: products that have orders must not vanish from history.
 export async function archiveProduct(id) {
-  await doc(db, "products_egp", id).update({
+  const batch = writeBatch(db);
+  batch.set(doc(db, "products_egp", id), {
     status: "archived",
     updatedAt: serverTimestamp()
-  });
+  }, { merge: true });
+  // Archiving changes whether the product is collected by the snapshot build at
+  // all, so it forces a full rebuild rather than a product-card patch.
+  await commitCatalogBatch(batch, { scope: "full" });
 }
 
 /**

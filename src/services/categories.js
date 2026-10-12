@@ -1,23 +1,21 @@
 // Categories and collections.
 //
-// Two small collections with the same bilingual name shape, so they share this
-// module rather than getting two nearly-identical ones. Products reference a
-// category by id and never by name, which is what makes these safe to rename.
+ // Two small collections with the same bilingual name shape, so they share this
+ // module rather than getting two nearly-identical ones. Products reference a
+ // category by id and never by name, which is what makes these safe to rename.
 
 import {
   collection,
   doc,
-  deleteDoc,
   getDocs,
   orderBy,
   query,
   serverTimestamp,
-  setDoc,
-  updateDoc,
   where,
   writeBatch
 } from 'firebase/firestore'
 import { db } from './firebase'
+import { commitCatalogBatch } from './catalogDirty'
 
 const withId = (d) => ({ id: d.id, ...d.data() })
 
@@ -41,22 +39,32 @@ export async function fetchCategoryTree() {
   return (byParent.get(null) ?? []).map((root) => ({ ...root, children: byParent.get(root.id) ?? [] }))
 }
 
+// Categories and collections feed the snapshot's structural sections, not just
+// product cards, so every write below asks for a full rebuild. See catalogDirty.js.
+const FULL_REBUILD = { scope: 'full' }
+
 /**
  * Save a category. An empty id creates it; otherwise the document is merged so
  * an image the owner did not touch is not lost.
  */
 export async function saveCategory(id, data) {
   const ref = id ? doc(db, 'categories', id) : doc(collection(db, 'categories'))
-  await setDoc(ref, {
-    name: { ar: data.nameAr ?? data.name?.ar ?? '', en: data.nameEn ?? data.name?.en ?? '' },
-    slug: data.slug ?? ref.id,
-    parentId: data.parentId || null,
-    image: data.image || null,
-    order: Number(data.order ?? 0),
-    active: data.active !== false,
-    ...(id ? {} : { createdAt: serverTimestamp() }),
-    updatedAt: serverTimestamp()
-  }, { merge: true })
+  const batch = writeBatch(db)
+  batch.set(
+    ref,
+    {
+      name: { ar: data.nameAr ?? data.name?.ar ?? '', en: data.nameEn ?? data.name?.en ?? '' },
+      slug: data.slug ?? ref.id,
+      parentId: data.parentId || null,
+      image: data.image || null,
+      order: Number(data.order ?? 0),
+      active: data.active !== false,
+      ...(id ? {} : { createdAt: serverTimestamp() }),
+      updatedAt: serverTimestamp()
+    },
+    { merge: true }
+  )
+  await commitCatalogBatch(batch, FULL_REBUILD)
   return ref.id
 }
 
@@ -78,7 +86,9 @@ export async function deleteCategory(id) {
     err.count = products.size
     throw err
   }
-  await deleteDoc(doc(db, 'categories', id))
+  const batch = writeBatch(db)
+  batch.delete(doc(db, 'categories', id))
+  await commitCatalogBatch(batch, FULL_REBUILD)
 }
 
 /* ----------------------------- collections ------------------------------ */
@@ -90,33 +100,44 @@ export async function fetchCollections() {
 
 export async function saveCollection(id, data) {
   const ref = id ? doc(db, 'collections', id) : doc(collection(db, 'collections'))
-  await setDoc(ref, {
-    title: { ar: data.titleAr ?? data.title?.ar ?? '', en: data.titleEn ?? data.title?.en ?? '' },
-    slug: data.slug ?? ref.id,
-    // A manual list, capped: a collection is a curated shelf, not a query.
-    productIds: (data.productIds ?? []).slice(0, 50),
-    banner: data.banner || null,
-    type: data.type ?? 'tile',
-    startsAt: data.startsAt ?? null,
-    endsAt: data.endsAt ?? null,
-    order: Number(data.order ?? 0),
-    active: data.active !== false,
-    ...(id ? {} : { createdAt: serverTimestamp() }),
-    updatedAt: serverTimestamp()
-  }, { merge: true })
+  const batch = writeBatch(db)
+  batch.set(
+    ref,
+    {
+      title: { ar: data.titleAr ?? data.title?.ar ?? '', en: data.titleEn ?? data.title?.en ?? '' },
+      slug: data.slug ?? ref.id,
+      // A manual list, capped: a collection is a curated shelf, not a query.
+      productIds: (data.productIds ?? []).slice(0, 50),
+      banner: data.banner || null,
+      type: data.type ?? 'tile',
+      startsAt: data.startsAt ?? null,
+      endsAt: data.endsAt ?? null,
+      order: Number(data.order ?? 0),
+      active: data.active !== false,
+      ...(id ? {} : { createdAt: serverTimestamp() }),
+      updatedAt: serverTimestamp()
+    },
+    { merge: true }
+  )
+  await commitCatalogBatch(batch, FULL_REBUILD)
   return ref.id
 }
 
 export async function deleteCollection(id) {
-  await deleteDoc(doc(db, 'collections', id))
+  const batch = writeBatch(db)
+  batch.delete(doc(db, 'collections', id))
+  await commitCatalogBatch(batch, FULL_REBUILD)
 }
 
 /** Replace a collection's product list in one write, order preserved. */
 export async function setCollectionProducts(id, productIds) {
-  await updateDoc(doc(db, 'collections', id), {
-    productIds: productIds.slice(0, 50),
-    updatedAt: serverTimestamp()
-  })
+  const batch = writeBatch(db)
+  batch.set(
+    doc(db, 'collections', id),
+    { productIds: productIds.slice(0, 50), updatedAt: serverTimestamp() },
+    { merge: true }
+  )
+  await commitCatalogBatch(batch, FULL_REBUILD)
 }
 
 /**
@@ -143,6 +164,8 @@ export async function ensureBaseCategories(seed = []) {
     added++
   }
 
-  if (added > 0) await batch.commit()
+  if (added > 0) {
+    await commitCatalogBatch(batch, FULL_REBUILD)
+  }
   return added
 }

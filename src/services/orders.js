@@ -5,6 +5,7 @@
 
 import { doc, collection, getDocs, query, where, orderBy, runTransaction, arrayUnion, increment } from "firebase/firestore";
 import { db, auth } from "../services/firebase";
+import { scheduleCatalogRebuild } from "./catalogDirty";
 import { canTransition } from "./orderLogic";
 
 export {
@@ -85,6 +86,12 @@ export async function cancelOrder(orderId, newStatus = "cancelled") {
       statusHistory: arrayUnion({ status: newStatus, at: Date.now(), by: actor() })
     });
   });
+
+  // Restocking moved product stock, which the published snapshot cards carry.
+  // Note the restock above does not touch products_egp.updatedAt, so the Store's
+  // product-only partial patch cannot detect it either - publishing here is the
+  // only thing that keeps the storefront's stock honest after a cancellation.
+  scheduleCatalogRebuild();
 }
 
 /**
