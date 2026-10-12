@@ -8,41 +8,18 @@
 // store does not own, so a scanned code led nowhere. Both are fixed here: the
 // origin comes from the page, and the brand is ProActive.
 //
-// Arabic text is shaped with arabic-reshaper + bidi-js and rendered with
-// IBM Plex Sans Arabic (embedded TTF). Codes, numbers and EGP stay LTR.
+// Arabic: do NOT pre-shape it. jsPDF has its own Arabic shaper (processArabic)
+// and its own Unicode bidi engine (__bidiEngine__.doBidiReorder) in the TTF
+// text path, and they only produce correct output from LOGICAL-order text.
+// Feeding them text that was already shaped and visually reordered (with
+// arabic-reshaper + bidi-js, as this file used to do) is double processing:
+// the engine inverts the visual string back to logical order but the
+// presentation forms pass through its shaper untouched, so every word ends up
+// mis-joined and garbled. Pass the raw strings here and jsPDF does both jobs.
+// Codes, numbers and EGP stay LTR.
 
 import { jsPDF } from 'jspdf'
 import QRCode from 'qrcode'
-import * as ArabicReshaperModule from 'arabic-reshaper'
-import * as bidiModule from 'bidi-js'
-
-// arabic-reshaper is a 2013 UMD bundle that assigns its object to
-// `module.exports`, so depending on the bundler the ESM default import can be
-// the exports object or a `{ default: exports }` namespace wrapper. Unwrap both,
-// because the alternative is a runtime TypeError on every printed coupon sheet.
-// (It also has no `reshape` — the method has always been `convertArabic`.)
-const ArabicReshaper = ArabicReshaperModule?.convertArabic
-  ? ArabicReshaperModule
-  : ArabicReshaperModule?.default
-
-// bidi-js ships two builds: a UMD CommonJS one (package "main") and an ESM one
-// (package "module"). BOTH export a *factory function* — the Unicode tables are
-// built inside it, and only calling it returns the API object.
-//
-// The old code named-imported `getEmbeddingLevels` / `getReorderedString` from
-// the UMD file directly. No bundler can resolve those statically: the export is
-// a property of the factory's RETURN value, not of module.exports, so rolldown
-// emitted a runtime namespace lookup on the factory itself and every Arabic
-// coupon print died with "(0, mN.getEmbeddingLevels) is not a function". The
-// unit tests never caught it because they only grepped the source text.
-//
-// Resolve the factory once here — tolerating either interop shape (namespace
-// wrapper, or the factory assigned to module.exports directly) — and call it.
-const bidiFactory = bidiModule?.default ?? bidiModule
-const bidi = typeof bidiFactory === 'function' ? bidiFactory() : bidiFactory
-const bidiReady =
-  typeof bidi?.getEmbeddingLevels === 'function' &&
-  typeof bidi?.getReorderedString === 'function'
 
 const A4 = { w: 210, h: 297 }
 const COLS = 2
@@ -93,26 +70,6 @@ async function ensureArabicFont(pdf) {
 }
 
 /**
- * Shape Arabic text for RTL display in jsPDF.
- * Codes, numbers, EGP, and Latin text remain LTR.
- */
-export function shapeArabic(str, lang) {
-  if (lang !== 'ar') return str
-  // Degrade to unshaped text rather than throw: the print path is not
-  // recoverable, and a coupon sheet with disconnected letters still carries
-  // the code and the discount.
-  if (typeof ArabicReshaper?.convertArabic !== 'function' || !bidiReady) {
-    console.warn('Arabic shaping unavailable; the PDF will print unshaped Arabic')
-    return str
-  }
-  // convertArabic joins letters; bidi-js handles RTL ordering. The base
-  // direction is a plain 'rtl' string, not an options object (an object here
-  // is silently ignored and the paragraph direction falls back to auto).
-  const reshaped = ArabicReshaper.convertArabic(str)
-  return bidi.getReorderedString(reshaped, bidi.getEmbeddingLevels(reshaped, 'rtl'))
-}
-
-/**
  * Draw wrapped text centered, returning the Y after the last line.
  */
 function drawWrappedCenter(pdf, lines, fontSize, x, y, lineHeight = 5) {
@@ -144,7 +101,7 @@ export async function couponSheetPdf(coupons = [], lang = 'en', origin = window.
     pdf.setFont(headerFont, 'normal')
     pdf.setFontSize(10)
     const subtitle = lang === 'ar' ? 'أكواد الخصم' : 'COUPON SHEET'
-    pdf.text(shapeArabic(subtitle, lang), A4.w / 2, PAD + 10, { align: 'center' })
+    pdf.text(subtitle, A4.w / 2, PAD + 10, { align: 'center' })
 
     pdf.setFont('helvetica', 'normal')
     pdf.setFontSize(9)
@@ -170,7 +127,7 @@ export async function couponSheetPdf(coupons = [], lang = 'en', origin = window.
     const footerText = lang === 'ar'
       ? 'صالح للاستخدام مرة واحدة · امسح الكود عند الطلب'
       : 'Single use · non-transferable · scan at checkout'
-    pdf.text(shapeArabic(footerText, lang), A4.w / 2, A4.h - 6, { align: 'center' })
+    pdf.text(footerText, A4.w / 2, A4.h - 6, { align: 'center' })
   }
 
   pdf.save(`coupons-${new Date().toISOString().slice(0, 10)}.pdf`)
@@ -194,8 +151,7 @@ async function drawTile(pdf, coupon, x, y, w, h, lang, origin) {
     pdf.setFont(fontName, bold ? 'bold' : 'normal')
     pdf.setFontSize(size)
     pdf.setTextColor(18)
-    const shaped = shapeArabic(str, lang)
-    pdf.text(shaped, xPos, yPos, { align })
+    pdf.text(str, xPos, yPos, { align })
   }
 
   // "COUPON CODE" label
@@ -240,7 +196,7 @@ async function drawTile(pdf, coupon, x, y, w, h, lang, origin) {
       // Wrap each note to tile inner width
       pdf.setFont(fontName, 'normal')
       pdf.setFontSize(noteFontSize)
-      const lines = pdf.splitTextToSize(shapeArabic(note, lang), TILE_INNER_W)
+      const lines = pdf.splitTextToSize(note, TILE_INNER_W)
       const lineArray = Array.isArray(lines) ? lines : [lines]
       noteY = drawWrappedCenter(pdf, lineArray, noteFontSize, tileCenterX, noteY, lineHeight)
     }
