@@ -38,6 +38,12 @@ export default function ProductEditor({ productId, copyFrom, categories, L, onCl
   const [formErrors, setFormErrors] = useState({})
   // Track which fields have been touched to only show validation after interaction
   const [touched, setTouched] = useState({})
+  // Once the owner has pressed Save, service-level validation errors must show
+  // regardless of whether that field was ever touched. Without this, a gate that
+  // consulted only `touched` and `saving` was already false by render time
+  // (setFormErrors in the catch and setSaving(false) in the finally are batched
+  // together), so "Invalid product" appeared in the console and nowhere on screen.
+  const [submitted, setSubmitted] = useState(false)
 
   const [title, setTitle] = useState({ ar: '', en: '' })
   const [description, setDescription] = useState({ ar: '', en: '' })
@@ -125,6 +131,7 @@ export default function ProductEditor({ productId, copyFrom, categories, L, onCl
       care: true
     })
     setSaving(true)
+    setSubmitted(true)
     setFormErrors({})
     try {
       const id = await saveProductWithStock({
@@ -223,17 +230,17 @@ return (
           <Field id="e-title-en" label={t('nameEn')} value={title.en}
             onChange={(e) => setTitle((p) => ({ ...p, en: e.target.value }))}
             onBlur={() => setTouched((prev) => ({ ...prev, title: true }))}
-            error={formErrors.title && (touched.title || saving) ? (t(formErrors.title) ?? formErrors.title) : undefined} />
+            error={formErrors.title && (touched.title || saving || submitted) ? (t(formErrors.title) ?? formErrors.title) : undefined} />
           <Field id="e-title-ar" label={t('nameAr')} value={title.ar} dir="rtl"
             onChange={(e) => setTitle((p) => ({ ...p, ar: e.target.value }))}
             onBlur={() => setTouched((prev) => ({ ...prev, title: true }))}
-            error={formErrors.title && (touched.title || saving) ? (t(formErrors.title) ?? formErrors.title) : undefined} />
+            error={formErrors.title && (touched.title || saving || submitted) ? (t(formErrors.title) ?? formErrors.title) : undefined} />
         </div>
         <div className="pa-editor__row">
           <Field id="e-slug" label={`${t('slug')} (${t('optional')})`} value={slug}
             onChange={(e) => setSlug(e.target.value)}
             onBlur={() => setTouched((prev) => ({ ...prev, slug: true }))}
-            error={formErrors.slug && (touched.slug || saving) ? (t(formErrors.slug) ?? formErrors.slug) : undefined}
+            error={formErrors.slug && (touched.slug || saving || submitted) ? (t(formErrors.slug) ?? formErrors.slug) : undefined}
             hint={L('slugHint', 'Used in links. Generated from the English title when empty.', 'بيتستخدم في الروابط. بيتولد من الاسم الإنجليزي لو فاضي.')} />
           <Select id="e-status" label={t('status')} value={status} onChange={(e) => setStatus(e.target.value)}>
             <option value="active">{t('active')}</option>
@@ -244,7 +251,7 @@ return (
         <Select id="e-category" label={t('category')} value={categoryId}
           onChange={(e) => setCategoryId(e.target.value)}
           onBlur={() => setTouched((prev) => ({ ...prev, categoryId: true }))}
-          error={formErrors.categoryId && (touched.categoryId || saving) ? (t(formErrors.categoryId) ?? formErrors.categoryId) : undefined}>
+          error={formErrors.categoryId && (touched.categoryId || saving || submitted) ? (t(formErrors.categoryId) ?? formErrors.categoryId) : undefined}>
           <option value="">{L('noCategory', 'No category', 'بدون قسم')}</option>
           {categories.map((c) => (
             <option key={c.id} value={c.id}>{loc(c.name, lang)}</option>
@@ -253,11 +260,11 @@ return (
         <Field id="e-desc-en" label={`${t('description')} (EN)`} value={description.en}
           onChange={(e) => setDescription((p) => ({ ...p, en: e.target.value }))}
           onBlur={() => setTouched((prev) => ({ ...prev, description: true }))}
-          error={formErrors.description && (touched.description || saving) ? (t(formErrors.description) ?? formErrors.description) : undefined} />
+          error={formErrors.description && (touched.description || saving || submitted) ? (t(formErrors.description) ?? formErrors.description) : undefined} />
         <Field id="e-desc-ar" label={`${t('description')} (AR)`} value={description.ar} dir="rtl"
           onChange={(e) => setDescription((p) => ({ ...p, ar: e.target.value }))}
           onBlur={() => setTouched((prev) => ({ ...prev, description: true }))}
-          error={formErrors.description && (touched.description || saving) ? (t(formErrors.description) ?? formErrors.description) : undefined} />
+          error={formErrors.description && (touched.description || saving || submitted) ? (t(formErrors.description) ?? formErrors.description) : undefined} />
       </section>
 
       <section className="pa-editor__section">
@@ -265,11 +272,11 @@ return (
           <Field id="e-price" label={t('price')} type="number" min="0" step="0.01" value={price}
             onChange={(e) => setPrice(e.target.value)}
             onBlur={() => setTouched((prev) => ({ ...prev, price: true }))}
-            error={formErrors.price && (touched.price || saving) ? (t(formErrors.price) ?? formErrors.price) : undefined} />
+            error={formErrors.price && (touched.price || saving || submitted) ? (t(formErrors.price) ?? formErrors.price) : undefined} />
           <Field id="e-compare" label={t('compareAtPrice')} type="number" min="0" step="0.01" value={compareAt}
             onChange={(e) => setCompareAt(e.target.value)}
             onBlur={() => setTouched((prev) => ({ ...prev, compareAt: true }))}
-            error={formErrors.compareAtPrice && (touched.compareAt || saving) ? (t(formErrors.compareAtPrice) ?? formErrors.compareAtPrice) : undefined}
+            error={formErrors.compareAtPrice && (touched.compareAt || saving || submitted) ? (t(formErrors.compareAtPrice) ?? formErrors.compareAtPrice) : undefined}
             hint={L('compareHint', 'The old price, if this piece is on sale.', 'السعر القديم، لو القطعة عليها خصم.')} />
         </div>
         {/* The number the storefront will actually show, before it is saved. */}
@@ -283,11 +290,11 @@ return (
           <Field id="e-material" label={`${t('material')} (${t('optional')})`} value={material}
             onChange={(e) => setMaterial(e.target.value)}
             onBlur={() => setTouched((prev) => ({ ...prev, material: true }))}
-            error={formErrors.material && (touched.material || saving) ? (t(formErrors.material) ?? formErrors.material) : undefined} />
+            error={formErrors.material && (touched.material || saving || submitted) ? (t(formErrors.material) ?? formErrors.material) : undefined} />
           <Field id="e-care" label={`${t('care')} (${t('optional')})`} value={care}
             onChange={(e) => setCare(e.target.value)}
             onBlur={() => setTouched((prev) => ({ ...prev, care: true }))}
-            error={formErrors.care && (touched.care || saving) ? (t(formErrors.care) ?? formErrors.care) : undefined}
+            error={formErrors.care && (touched.care || saving || submitted) ? (t(formErrors.care) ?? formErrors.care) : undefined}
             hint={L('careHint', 'Comma separated, e.g. machine wash cold, do not bleach', 'مفصولة بفاصلة')} />
         </div>
         <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
@@ -315,7 +322,7 @@ return (
           ))}
           <ColorAdder onAdd={(c) => setColors((prev) => [...prev, c])} taken={colors.map((c) => c.id)} L={L} />
         </div>
-        {(formErrors.colors && (touched.colors || saving)) && <div className="pa-error">{t(formErrors.colors) ?? formErrors.colors}</div>}
+        {(formErrors.colors && (touched.colors || saving || submitted)) && <div className="pa-error">{t(formErrors.colors) ?? formErrors.colors}</div>}
       </section>
 
       <section className="pa-editor__section">
@@ -333,7 +340,7 @@ return (
             </button>
           ))}
         </div>
-        {(formErrors.sizes && (touched.sizes || saving)) && <div className="pa-error">{t(formErrors.sizes) ?? formErrors.sizes}</div>}
+        {(formErrors.sizes && (touched.sizes || saving || submitted)) && <div className="pa-error">{t(formErrors.sizes) ?? formErrors.sizes}</div>}
       </section>
 
       <section className="pa-editor__section">
@@ -398,8 +405,17 @@ return (
             }}
           />
         </div>
-        {(formErrors.images && (touched.images || saving)) && <div className="pa-error">{t(formErrors.images) ?? formErrors.images}</div>}
+        {(formErrors.images && (touched.images || saving || submitted)) && <div className="pa-error">{t(formErrors.images) ?? formErrors.images}</div>}
       </section>
+
+      {/* The service can reject the whole form on the variant list ("add at least
+          one variant"). Nothing in the body renders that key, so it used to be
+          the one validation error with no on-screen home at all. */}
+      {formErrors.variants && (saving || submitted) && (
+        <div className="pa-callout pa-callout--error" role="alert">
+          {t(formErrors.variants) ?? formErrors.variants}
+        </div>
+      )}
     </EditorShell>
   )
 }
