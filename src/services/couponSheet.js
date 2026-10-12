@@ -105,9 +105,11 @@ export function shapeArabic(str, lang) {
     console.warn('Arabic shaping unavailable; the PDF will print unshaped Arabic')
     return str
   }
-  // convertArabic joins letters; bidi-js handles RTL ordering.
+  // convertArabic joins letters; bidi-js handles RTL ordering. The base
+  // direction is a plain 'rtl' string, not an options object (an object here
+  // is silently ignored and the paragraph direction falls back to auto).
   const reshaped = ArabicReshaper.convertArabic(str)
-  return bidi.getReorderedString(reshaped, bidi.getEmbeddingLevels(reshaped, { rtl: true }))
+  return bidi.getReorderedString(reshaped, bidi.getEmbeddingLevels(reshaped, 'rtl'))
 }
 
 /**

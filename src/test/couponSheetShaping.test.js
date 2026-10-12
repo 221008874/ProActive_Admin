@@ -76,6 +76,12 @@ describe('shapeArabic pipeline (real calls)', () => {
     expect(shaped.length).toBeGreaterThan(0)
   })
 
+  it('forces the RTL base direction, not an options object', () => {
+    // getEmbeddingLevels takes a plain 'rtl' string; an object is silently
+    // ignored and the paragraph direction falls back to auto-detect.
+    expect(source).toContain("getEmbeddingLevels(reshaped, 'rtl')")
+  })
+
   it('does not throw for the strings the sheet actually prints', () => {
     // The regression test for the production TypeError: every Arabic literal
     // in the sheet flows through here.
