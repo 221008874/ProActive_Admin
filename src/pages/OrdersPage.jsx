@@ -17,6 +17,7 @@ import { useLanguage } from '../context/LanguageContext'
 import { useToast } from '../ui/overlays'
 import { setStatus, cancelOrder, fetchOrders, fetchOrdersByStatus } from '../services/orders'
 import { packingSlipPdf } from '../services/packingSlip'
+import { orderStatusLabel, orderActionLabel } from '../services/orderLabels'
 
 const label = (t, lang) => (key, en, ar) => {
   if (key) {
@@ -107,7 +108,7 @@ export default function OrdersPage() {
       } else {
         const next = { confirm: 'confirmed', ship: 'shipped', deliver: 'delivered', return: 'returned' }[action]
         await setStatus(order.id, next)
-        toast.show(t(`status_${next}`) ?? `Marked ${next}`)
+        toast.show(orderStatusLabel(t, next))
       }
       setSelected(null)
       setReload((n) => n + 1)
@@ -152,7 +153,7 @@ export default function OrdersPage() {
         {STATUS_TABS.map((s) => (
           <button key={s} type="button" role="tab" aria-selected={tab === s}
             className="pa-statustab" onClick={() => { setTab(s); setSelected(null) }}>
-            {t(`status_${s}`)}
+            {orderStatusLabel(t, s)}
             {counts[s] ? <span className="pa-statustab__count">{counts[s]}</span> : null}
           </button>
         ))}
@@ -223,7 +224,7 @@ function OrderDetail({ order, busy, lang, onAction, onClose }) {
       <header className="pa-orderdetail__head">
         <div>
           <b className="pa-ltr" style={{ fontSize: 18 }}>{order.orderNumber ?? order.id}</b>
-          <StatusPill status={order.status} label={t(`status_${order.status}`)} />
+          <StatusPill status={order.status} label={orderStatusLabel(t, order.status)} />
         </div>
         <button type="button" className="pa-icon-btn" style={{ width: 44, height: 44 }}
           aria-label={t('close')} onClick={onClose}>
@@ -299,7 +300,7 @@ function OrderDetail({ order, busy, lang, onAction, onClose }) {
           {order.statusHistory?.length
             ? order.statusHistory.map((h, i) => (
               <div key={i} className="pa-subtitle" style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
-                <span>{t(`status_${h.status}`) ?? h.status}</span>
+                <span>{orderStatusLabel(t, h.status)}</span>
                 <span className="pa-ltr">{when(h.at, lang)}</span>
               </div>
             ))
@@ -313,7 +314,7 @@ function OrderDetail({ order, busy, lang, onAction, onClose }) {
         </Button>
         {actions.map((a) => (
           <Button key={a} block disabled={busy} onClick={() => onAction(order, a)}>
-            {t(`action_${a}`)}
+            {orderActionLabel(t, a)}
           </Button>
         ))}
         {/* Cancel is offered wherever the order still holds stock. */}

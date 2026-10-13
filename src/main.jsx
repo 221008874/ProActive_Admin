@@ -3,6 +3,7 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import App from './App'
+import { ToastProvider } from './ui/overlays'
 
 // Self-hosted design fonts. Same families and weights the store app loads and
 // tokens.css declares; the admin had no font loading at all before this, so it
@@ -23,10 +24,16 @@ import './tokens.css'
 import './styles/components.css'
 import './index.css'
 
+// ToastProvider must be ABOVE <App>. useToast() falls back to a no-op stub when
+// there is no provider, so without this every confirmation in the panel -
+// "Product saved", "Order cancelled", the count of fields blocking a save, a
+// failed stock edit - was silently dropped on the floor.
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <BrowserRouter>  {/* MUST be here */}
-      <App />
+      <ToastProvider>
+        <App />
+      </ToastProvider>
     </BrowserRouter>
   </React.StrictMode>
 )

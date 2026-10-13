@@ -254,6 +254,56 @@ export default function OperationsPage() {
   )
 }
 
+/**
+ * A number cell in a table that saves on blur.
+ *
+ * The owner edits shipping cost and minimum order dozens of times in a row, so
+ * there is no Save button per row: focus out (or Enter) commits, and the cell
+ * says "Saved" once the write lands. A number input, not a text one, so the
+ * browser rejects the letters that would otherwise be coerced to NaN and
+ * written to Firestore as a string.
+ */
+function SettingCell({ value, onSave, ariaLabel, savedLabel }) {
+  const [draft, setDraft] = useState(String(value ?? 0));
+  const [saved, setSaved] = useState(false);
+  // Re-sync when the row's stored value changes underneath us (a concurrent
+  // edit, or the reload after our own save), but not while the owner is typing.
+  useEffect(() => {
+    if (Number(draft) !== Number(value)) setDraft(String(value ?? 0));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
+
+  const commit = () => {
+    const next = Math.max(0, Number(draft) || 0);
+    setDraft(String(next));
+    if (next === Number(value ?? 0)) return;
+    onSave(next);
+    setSaved(true);
+  };
+
+  const onKeyDown = (e) => {
+    if (e.key === 'Enter') e.currentTarget.blur();
+  };
+
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+      <input
+        type="number"
+        min="0"
+        step="1"
+        className="pa-input pa-input--admin"
+        style={{ width: 84 }}
+        value={draft}
+        aria-label={ariaLabel}
+        onChange={(e) => { setDraft(e.target.value); setSaved(false) }}
+        onBlur={commit}
+        onKeyDown={onKeyDown}
+      />
+      {saved && <span className="pa-subtitle" role="status">{savedLabel}</span>}
+    </span>
+  );
+}
+
 /** A switch that reads as a switch but is a real checkbox underneath. */
 function Toggle({ on, onChange, label }) {
   return (

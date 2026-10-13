@@ -54,6 +54,7 @@ export default function CouponsPage() {
   const [editMaxUses, setEditMaxUses] = useState(1)
   const [editExpiresInDays, setEditExpiresInDays] = useState('')
   const [editError, setEditError] = useState('')
+  const [savingEdit, setSavingEdit] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -129,6 +130,10 @@ export default function CouponsPage() {
 
   const saveEdit = async () => {
     setEditError('')
+    // The dialog used to be handed saving={false} forever, so nothing stopped
+    // a second click while the write was in flight - two updates, two toasts.
+    if (savingEdit) return
+    setSavingEdit(true)
     try {
       await updateCoupon(editingCoupon.code, {
         type: editType,
@@ -143,6 +148,8 @@ export default function CouponsPage() {
     } catch (e) {
       console.error('Could not update coupon:', e)
       setEditError(e?.errors ? Object.values(e.errors).join(' ') : e.message)
+    } finally {
+      setSavingEdit(false)
     }
   }
 
@@ -274,11 +281,26 @@ export default function CouponsPage() {
                         {c.expiresAt ? whenDate(c.expiresAt, lang) : L('noExpiry', 'No expiry', 'منتهيمش')}
                       </span>
                       <span role="cell">
-                        <Toggle
-                          on={c.active}
-                          onChange={(on) => toggleCoupon(c, on)}
-                          label={c.active ? t('statusActive') : t('statusOff')}
-                        />
+                        {/* A coupon that ran out of uses or expired looks exactly
+                            like a healthy one behind a bare toggle: the owner
+                            sees "active" while the checkout refuses it. The
+                            dictionary already had the words for both. */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span className="pa-subtitle">
+                            {expired
+                              ? t('statusExpired')
+                              : exhausted
+                                ? t('statusUsedUp')
+                                : c.active
+                                  ? t('statusActive')
+                                  : t('statusOff')}
+                          </span>
+                          <Toggle
+                            on={c.active}
+                            onChange={(on) => toggleCoupon(c, on)}
+                            label={c.active ? t('statusActive') : t('statusOff')}
+                          />
+                        </div>
                       </span>
                       <span role="cell" style={{ display: 'flex', gap: 6 }}>
                         <button type="button" className="pa-btn pa-btn--sm pa-btn--outline"
@@ -305,7 +327,7 @@ export default function CouponsPage() {
           L={L}
           onClose={() => setEditingCoupon(null)}
           onSave={saveEdit}
-          saving={false}
+saving={savingEdit}
           editType={editType}
           editValue={editValue}
           editMinOrder={editMinOrder}
@@ -361,7 +383,7 @@ function CouponEditDialog({ coupon, t, L, onClose, onSave, saving, editType, edi
         </div>
         <footer className="pa-editor__foot">
           <Button variant="outline" onClick={onClose}>{L('cancel', 'Cancel', 'إلغاء')}</Button>
-          <Button onClick={onSave}>{t('save')}</Button>
+          <Button onClick={onSave} disabled={saving}>{saving ? L('saving', 'Saving…', 'جاري الحفظ…') : t('save')}</Button>
         </footer>
       </aside>
     </>

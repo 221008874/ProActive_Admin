@@ -11,6 +11,7 @@ import { db } from '../services/firebase'
 import { Button, EmptyState, ErrorState, PageTitle, Skeleton, StatusPill, formatEGP } from '../ui'
 import { useLanguage } from '../context/LanguageContext'
 import { NAV, hrefFor } from '../config/nav'
+import { orderStatusLabel } from '../services/orderLabels'
 
 // Section links go through the nav table rather than a literal path: the same
 // mismatch that sent "Low stock" to the login screen started as a hardcoded URL.
@@ -105,8 +106,12 @@ export default function OverviewPage() {
           </div>
 
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 16 }}>
-            <Button as={Link} href={hrefForKey('orders')}>{t('goToOrders')}</Button>
-            <Button as={Link} variant="outline" href={hrefForKey('lowStock')}>{t('goToLowStock')}</Button>
+            {/* A React Router <Link> navigates on `to`, not `href`. Button
+                forwards every extra prop onto the element it renders, so
+                `as={Link} href=...` put an href on a Link - which ignored it and
+                left both quick actions dead. `to=` is what actually navigates. */}
+            <Button as={Link} to={hrefForKey('orders')}>{t('goToOrders')}</Button>
+            <Button as={Link} variant="outline" to={hrefForKey('lowStock')}>{t('goToLowStock')}</Button>
           </div>
 
           <section style={{ marginTop: 28 }}>
@@ -127,7 +132,7 @@ export default function OverviewPage() {
                     <div className="pa-tr" key={o.id} role="row">
                       <span role="cell"><b className="pa-ltr">{o.orderNumber ?? o.id.slice(-6)}</b></span>
                       <span role="cell">{o.customer?.name}</span>
-                      <span role="cell"><StatusPill status={o.status} label={t(`status_${o.status}`)} /></span>
+                      <span role="cell"><StatusPill status={o.status} label={orderStatusLabel(t, o.status)} /></span>
                       <span role="cell"><bdi>{formatEGP(o.total ?? 0, lang)}</bdi></span>
                       <span role="cell" className="pa-subtitle">{when(o.createdAt, lang)}</span>
                     </div>
