@@ -9,7 +9,6 @@ import {
   getDocs,
   getDoc,
   runTransaction,
-  increment,
   query,
   orderBy
 } from "firebase/firestore";
@@ -93,6 +92,23 @@ export async function setVariantStock(productId, variantId, stock) {
   const productRef = doc(db, "products_egp", productId);
   const variantRef = doc(productRef, "variants", variantId);
 
+  // availableColors / availableSizes are denormalised from every variant that is
+  // active AND in stock, and the storefront filters its colour swatches and size
+  // pills on them. totalStock alone is just a number, so nudging it left these
+  // stale: a variant zeroed here kept its colour and size selectable on the shop
+  // floor and the shopper only found out at checkout.
+  // recomputeProductFlags existed for exactly this job and had no caller; rather
+  // than leave a second read and a second write, the variants are read once here
+  // and the flags are written in the same transaction as the stock move.
+  //
+  // The read is outside the transaction on purpose: a Firestore transaction
+  // cannot run a query, and reading every variant document inside one would need
+  // their ids up front. The transaction still guards the write itself - the
+  // variant must exist, and `stock` is set absolutely, so two simultaneous edits
+  // cannot lose each other's update.
+  const variantsSnap = await getDocs(collection(productRef, "variants"));
+  const denorm = computeDenorm(variantsSnap.docs.map((d) => ({ ...d.data(), id: d.id })));
+
   await runTransaction(db, async (tx) => {
     const variantSnap = await tx.get(variantRef);
     if (!variantSnap.exists()) {
@@ -103,7 +119,9 @@ export async function setVariantStock(productId, variantId, stock) {
 
     tx.update(variantRef, { stock: value });
     tx.update(productRef, {
-      totalStock: increment(value - (variantSnap.data().stock ?? 0)),
+      totalStock: denorm.totalStock,
+      availableColors: denorm.availableColors,
+      availableSizes: denorm.availableSizes,
       updatedAt: serverTimestamp()
     });
 
@@ -172,8 +190,11 @@ export async function fetchAllProducts() {
 export async function saveProductWithStock({ product, stock }) {
   const { id, colors, sizes, ...rest } = product;
 
-  const variants = (colors ?? []).flatMap((c) =>
-    (sizes ?? []).map((s) => ({
+  const variantColors = colors ?? [];
+  const variantSizes = sizes ?? [];
+
+  const variants = variantColors.flatMap((c) =>
+    variantSizes.map((s) => ({
       colorId: c.id,
       color: loc(c.name, "en") || c.id,
       size: s,
@@ -185,6 +206,13 @@ export async function saveProductWithStock({ product, stock }) {
 
   const data = {
     ...rest,
+    // colors and sizes are part of the product document, not only an input to
+    // the variant grid. They were destructured away above and never restored,
+    // so `validateProduct` - which requires both - rejected EVERY save with
+    // "Add at least one colour" / "Add at least one size" no matter what the
+    // owner picked, and a saved product came back with an empty colour list.
+    colors: variantColors,
+    sizes: variantSizes,
     // An empty slug is generated from the English title, because the storefront
     // resolves /product/<slug> and two products cannot share one.
     slug: (rest.slug || slugify(loc(rest.title, "en"))).toLowerCase(),

@@ -3,10 +3,12 @@
 // The order's own `status` field is now the single source of truth -
 // `confirmedPayments_egp` is legacy and is no longer written.
 
-import { doc, collection, getDocs, query, where, orderBy, runTransaction, arrayUnion, increment } from "firebase/firestore";
+import { doc, collection, getDoc, getDocs, query, where, orderBy, runTransaction, arrayUnion, increment, writeBatch } from "firebase/firestore";
 import { db, auth } from "../services/firebase";
-import { scheduleCatalogRebuild } from "./catalogDirty";
+import { commitCatalogBatch, scheduleCatalogRebuild } from "./catalogDirty";
 import { canTransition } from "./orderLogic";
+import { computeDenorm } from "./productLogic";
+import { serverTimestamp } from "firebase/firestore";
 
 export {
   ORDER_STATUSES,
@@ -88,9 +90,41 @@ export async function cancelOrder(orderId, newStatus = "cancelled") {
   });
 
   // Restocking moved product stock, which the published snapshot cards carry.
-  // Note the restock above does not touch products_egp.updatedAt, so the Store's
+  // The restock above does not touch products_egp.updatedAt, so the Store's
   // product-only partial patch cannot detect it either - publishing here is the
   // only thing that keeps the storefront's stock honest after a cancellation.
+  //
+  // This writes the DIRTY FLAG as well as asking for a rebuild. Without it, a
+  // cancellation whose store API is not configured (VITE_STORE_API_BASE unset,
+  // which is the default) left the flag clear: nothing told the Store the
+  // catalogue had changed, so the restocked stock only reached the shop on the
+  // next full build - and the button/API path was never told either.
+  //
+  // availableColors / availableSizes are recomputed for the same reason: a
+  // restocked variant must return to the colour swatch and size pill the
+  // storefront filters on. The reads are outside the transaction (a transaction
+  // cannot query), which is the same trade-off setVariantStock makes.
+  // Re-read the order (the transaction is closed) to learn which products were
+  // restocked, then rewrite their denormalised fields. The reads are outside the
+  // transaction because a Firestore transaction cannot run a query - the same
+  // trade-off setVariantStock makes.
+  const restockedSnap = await getDoc(ref);
+  const items = restockedSnap.exists() ? restockedSnap.data().items ?? [] : [];
+  const productIds = [...new Set(items.filter((i) => i.variantId).map((i) => i.productId))];
+
+  const batch = writeBatch(db);
+  for (const productId of productIds) {
+    const variantsSnap = await getDocs(collection(db, "products_egp", productId, "variants"));
+    const denorm = computeDenorm(variantsSnap.docs.map((d) => ({ ...d.data(), id: d.id })));
+    batch.set(doc(db, "products_egp", productId), {
+      totalStock: denorm.totalStock,
+      availableColors: denorm.availableColors,
+      availableSizes: denorm.availableSizes,
+      updatedAt: serverTimestamp()
+    }, { merge: true });
+  }
+  await commitCatalogBatch(batch);
+
   scheduleCatalogRebuild();
 }
 
