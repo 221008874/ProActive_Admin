@@ -22,6 +22,24 @@ describe('product editor validation visibility', () => {
   })
 
   it('renders the variants error, which previously had no on-screen home', () => {
-    expect(source).toContain('formErrors.variants')
+    expect(source).toContain('activeErrors.variants')
+  })
+
+  it('derives the error list live, not from the last rejected save', () => {
+    // The summary used to be a verbatim copy of the service's errors, so a
+    // field the owner had already fixed stayed listed and there was no way to
+    // tell whether saving again would work. It is now recomputed from the
+    // current form state.
+    expect(source).toContain('validateEditorForm')
+    expect(source).toMatch(/liveErrors/)
+    expect(source).toMatch(/activeErrors/)
+  })
+
+  it('drops a service error on any field the live pass decides', () => {
+    // The merge must know which keys the live pass has an opinion about —
+    // including the ones it currently considers fine — so a stale "add at
+    // least one colour" cannot outlive the colour chip that fixed it.
+    expect(source).toMatch(/LIVE_KEYS/)
+    expect(source).toMatch(/for \(const \[key, message\] of Object\.entries\(formErrors\)\)/)
   })
 })

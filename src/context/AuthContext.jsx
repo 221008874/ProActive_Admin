@@ -40,9 +40,15 @@ export function AuthProvider({ children }) {
 
       setStatus(STATUS.loading)
       try {
-        // forceRefresh on the first read after sign-in: the claim is issued
-        // server-side and may post-date the token the client cached at login.
-        const token = await user.getIdTokenResult()
+        // forceRefresh=true: the claim is issued server-side (scripts/setAdmin.mjs)
+        // and may post-date the ID token the client is holding from an earlier
+        // sign-in. Without a forced refresh, a freshly-granted claim is invisible
+        // until the SDK's token cache happens to expire (up to ~1h), and the
+        // owner sees a "not authorized" screen for a claim they already have -
+        // with no in-app way to pick it up short of signing out and back in.
+        // One extra network round trip per page load is the price of never
+        // locking an admin out of a working account.
+        const token = await user.getIdTokenResult(true)
         const admin = token.claims.admin === true
         setIsAdmin(admin)
         setStatus(admin ? STATUS.admin : STATUS.denied)

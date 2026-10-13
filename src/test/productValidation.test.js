@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
-import { validateProduct, MAX_VARIANTS } from '../services/productLogic'
+import { validateProduct, validateEditorForm, MAX_VARIANTS } from '../services/productLogic'
 import { ar, en } from '../i18n/strings'
 
 // Three defects made "Could not save product" unsolvable for the owner:
@@ -82,6 +82,52 @@ describe('a rejected save is always visible', () => {
   it('translates every validation message with the {max} placeholder filled', () => {
     // A raw t(msg) leaves "{max}" literal on screen.
     expect(editor).not.toMatch(/t\(formErrors\./)
-    expect(editor).toContain('translateError(t, formErrors')
+    expect(editor).toContain('translateError(t, activeErrors')
+  })
+})
+
+describe('validateEditorForm: the live pass the panel renders from', () => {
+  // The editor holds its values as strings; the live pass must coerce exactly
+  // the way saveProductWithStock does, or the list the owner sees while typing
+  // disagrees with the list the service enforces on write.
+  const form = {
+    price: '100',
+    compareAtPrice: '',
+    colors: [{ id: 'c1' }],
+    sizes: ['M'],
+    images: [{ url: 'u', primary: true }]
+  }
+
+  it('accepts a complete form typed as strings, the way the editor holds it', () => {
+    expect(validateEditorForm(form, { c1_M: 3 }).isValid).toBe(true)
+  })
+
+  it('rejects an empty price and a compare-at that is not above the price', () => {
+    expect(validateEditorForm({ ...form, price: '' }, {}).errors.price).toBe('Price must be greater than zero')
+    expect(validateEditorForm({ ...form, compareAtPrice: '50' }, {}).errors.compareAtPrice)
+      .toBe('Compare-at price must be greater than the price')
+    expect(validateEditorForm({ ...form, compareAtPrice: '500' }, {}).isValid).toBe(true)
+  })
+
+  it('derives variants from the colour × size grid, so a grid with no cells is a variant error', () => {
+    expect(validateEditorForm(form, {}).errors.variants).toBeUndefined()
+    expect(validateEditorForm({ ...form, sizes: [] }, {}).errors.sizes).toBe('Add at least one size')
+    expect(validateEditorForm({ ...form, sizes: [] }, {}).errors.variants).toBe('Add at least one variant')
+    expect(validateEditorForm({ ...form, colors: [] }, {}).errors.colors).toBe('Add at least one colour')
+  })
+
+  it('needs at least one photo', () => {
+    expect(validateEditorForm({ ...form, images: [] }, {}).errors.images).toBe('Add at least one image')
+  })
+
+  it('sees exactly the same keys the service will enforce on write', () => {
+    // If this drifts, the banner lies: either it hides a real blocker or it
+    // lists a field the save would have accepted.
+    const broken = { ...form, price: '0', colors: [], images: [] }
+    const live = validateEditorForm(broken, {}).errors
+    const service = validateProduct({
+      price: 0, compareAtPrice: null, colors: [], sizes: ['M'], images: []
+    }, []).errors
+    expect(Object.keys(live).sort()).toEqual(Object.keys(service).sort())
   })
 })

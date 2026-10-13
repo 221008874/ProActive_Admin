@@ -29,6 +29,7 @@ export {
   computeDenorm,
   computeDiscountPct,
   validateProduct,
+  validateEditorForm,
   variantsFromGrid,
   MAX_VARIANTS
 } from "./productLogic";

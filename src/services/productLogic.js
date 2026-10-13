@@ -62,6 +62,28 @@ export function validateProduct(data = {}, variants = []) {
   return { errors, isValid: Object.keys(errors).length === 0 };
 }
 
+// Validate the editor's form shape, without Firebase, so the panel can
+// re-derive its error list on every change instead of only after a rejected
+// save. It mirrors exactly what saveProductWithStock hands to validateProduct —
+// the same colour × size grid, the same number coercions — so the list the
+// owner sees while typing and the list the service enforces on write can never
+// disagree.
+export function validateEditorForm(form = {}, stock = {}) {
+  return validateProduct(
+    {
+      price: Number(form.price),
+      compareAtPrice:
+        form.compareAtPrice === "" || form.compareAtPrice == null
+          ? null
+          : Number(form.compareAtPrice),
+      colors: form.colors ?? [],
+      sizes: form.sizes ?? [],
+      images: form.images ?? []
+    },
+    variantsFromGrid(form.colors, form.sizes, stock)
+  );
+}
+
 // Turns a colour x size grid into the flat variant array the batch writes.
 export function variantsFromGrid(colors, sizes, stockByKey = {}) {
   const out = [];
